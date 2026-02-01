@@ -1,8 +1,15 @@
 package main
 
-import "fmt"
+import (
+	"Monopoly/load"
+	"Monopoly/logger"
+)
 
 
 func main() {
-	fmt.Println("Start Monopoly")
+	load.Env()
+	logger.Logger()
+
+	logger.ZapLogger.Infoln("Start Database")
+
 }

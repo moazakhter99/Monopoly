@@ -1,0 +1,3 @@
+{"level":"\u001b[34mINFO\u001b[0m","timestamp":"2026/02/02 00:02:03.796459","caller":"Monopoly/main.go:13","message":"Start Database"}
+{"level":"\u001b[34mINFO\u001b[0m","timestamp":"2026/02/02 00:04:13.198633","caller":"Monopoly/main.go:13","message":"Start Database"}
+{"level":"INFO","timestamp":"2026/02/02 00:04:52.638497","caller":"Monopoly/main.go:13","message":"Start Database"}
