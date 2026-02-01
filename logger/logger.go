@@ -38,7 +38,6 @@ func Logger() {
 		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
 
-	// encoder := zapcore.NewConsoleEncoder(encoderConfig)
 	encoder := zapcore.NewJSONEncoder(encoderConfig)
 	consoleWriter := zapcore.AddSync(os.Stdout)
 	logWrtiter = append(logWrtiter, consoleWriter)
@@ -71,7 +70,6 @@ func Logger() {
 		core,
 	), zap.AddCaller()).Sugar()
 	defer ZapLogger.Sync()
-
 
 
 }
