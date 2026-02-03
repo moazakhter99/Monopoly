@@ -19,7 +19,7 @@ func Env() {
 
 	if err := viper.ReadInConfig(); err != nil {
 		log.SetFlags(log.Lshortfile | log.LstdFlags)
-		log.Fatalf("Error reading config file, %s", err)
+		log.Fatalf("Error reading config file: ", err)
 	}
 
 

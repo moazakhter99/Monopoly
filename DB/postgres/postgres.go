@@ -8,11 +8,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-
 type Postgres struct {
 	DB *sql.DB
 }
-
 
 func OpenDatabase() (*Postgres, error) {
 
@@ -28,18 +26,25 @@ func OpenDatabase() (*Postgres, error) {
 	psqlconn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, psqlSSLMode)
 	db, err := sql.Open("postgres", psqlconn)
 	if err != nil {
-		logger.ZapLogger.Fatalln("Database Open", "Err", err)
+		logger.ZapLogger.Fatalw("Database Open", "Err", err)
 		return nil, err
-	}
-	err = db.Ping()
-	if err != nil {
-		logger.ZapLogger.Fatalf("Connecting to the Database", "Err" , err)
-		return nil, err
-	} else {
-		logger.ZapLogger.Infoln("Database Connection Successfully Done")
 	}
 
 	data := &Postgres{DB: db}
 
 	return data, err
+}
+
+func (p *Postgres) Ping() (err error) {
+	logger.ZapLogger.Infow("Enter Postgres Ping")
+
+	err = p.DB.Ping()
+	if err != nil {
+		logger.ZapLogger.Fatalw("Connecting to the Database", "Err", err)
+		return err
+	}
+	logger.ZapLogger.Infoln("Database Connection Successfully Done")
+
+	logger.ZapLogger.Infoln("Exit Postgres Ping")
+	return
 }

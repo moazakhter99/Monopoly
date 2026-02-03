@@ -1,3 +1,5 @@
 {
-    "LOG_FILEPATH":"./Monopoly.log"
+    "PORT":"3000",
+    "DATABASE":"SQLLITE",
+    "LOG_FILEPATH":"./monopoly.log"
 }
