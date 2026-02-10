@@ -8,6 +8,7 @@ import (
 	service "Monopoly/Service"
 	"Monopoly/load"
 	"Monopoly/logger"
+	"Monopoly/routes"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -51,6 +52,9 @@ func main() {
 	healthReq := service.CreateHealthReq(MonopolyDB)
 	healthHandler := handler.NewGameController(healthReq)
 	router.HandleFunc("/health", healthHandler.GameHandler).Methods("GET")
+
+	gameRouter := router.PathPrefix("/game").Subrouter()
+	routes.GameSubRouter(gameRouter, MonopolyDB, logger.ZapLogger)
 
 	http.ListenAndServe(":"+port, router)
 

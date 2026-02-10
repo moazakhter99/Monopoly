@@ -48,3 +48,11 @@ func (p *Postgres) Ping() (err error) {
 	logger.ZapLogger.Infoln("Exit Postgres Ping")
 	return
 }
+
+
+func (p *Postgres) InsertGame(gameId, matchId string) (err error) {
+	logger.ZapLogger.Infoln("Enter Insert Game")
+
+	logger.ZapLogger.Infoln("Exit Insert Game")
+	return
+}

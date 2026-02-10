@@ -2,8 +2,10 @@ package sqlLite
 
 import (
 	"Monopoly/logger"
+	"context"
 	"database/sql"
 	"os"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -51,5 +53,37 @@ func (l *SqlLite) Ping() (err error) {
 	logger.ZapLogger.Infoln("Database Connection Successfully Done")
 
 	logger.ZapLogger.Infoln("Exit SqlLite Ping")
+	return
+}
+
+func (l *SqlLite) InsertGame(gameId, matchId string) (err error) {
+	logger.ZapLogger.Infoln("Enter Create Game")
+
+	query := `INSERT INTO game (game_id, match_id) VALUES (?, ?)`
+
+	ctx, cancelF := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelF()
+	txn, err := l.DB.BeginTx(ctx, nil)
+	if err != nil {
+		logger.ZapLogger.Errorw("Begin Transaction", "Error", err)
+		txn.Rollback()
+		return
+	}
+
+	_, err = txn.Exec(query, gameId, matchId)
+	if err != nil {
+		logger.ZapLogger.Errorw("DB Insert", "Error", err)
+		txn.Rollback()
+		return
+	}
+
+	err = txn.Commit()
+	if err != nil {
+		logger.ZapLogger.Errorw("DB Commit", "Error", err)
+		txn.Rollback()
+		return
+	}
+
+	logger.ZapLogger.Infoln("Exit Create Game")
 	return
 }
