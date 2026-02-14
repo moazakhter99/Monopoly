@@ -1,7 +1,20 @@
 package service
 
+import (
+	db "Monopoly/DB"
 
-type Processor interface {
-	Validate(data []byte) (req any, err error)
-	ProcessMsg(req any) (resp []byte, err error)
+	"go.uber.org/zap"
+)
+
+
+type RequestProcessor struct {
+	db db.DbOperations
+	logger *zap.SugaredLogger
+}
+
+func CreateNewRequestProcessor(db db.DbOperations, logger *zap.SugaredLogger) RequestProcessor {
+	return RequestProcessor{
+		db: db,
+		logger: logger,
+	}
 }

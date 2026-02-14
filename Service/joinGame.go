@@ -1,58 +1,34 @@
 package service
 
 import (
-	db "Monopoly/DB"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
-
-	"go.uber.org/zap"
 )
 
 
 
+func (p RequestProcessor) JoinGame(data []byte) (resp []byte, err error) {
 
-type JoinGame struct {
-	db db.DbOperations
-	logger *zap.SugaredLogger
-}
-
-func CreateJoinGameReq(db db.DbOperations, logger *zap.SugaredLogger) *JoinGame {
-	return &JoinGame{
-		db: db,
-		logger: logger,
-	}
-}
-
-
-func (p *JoinGame) Validate(data []byte) (req any, err error) {
-	logger.ZapLogger.Infoln("Enter JoinGame Validation")
-	var request models.ReqJoinGame
-	err = json.Unmarshal(data, &request)
+// Validate
+	var req models.ReqJoinGame
+	err = json.Unmarshal(data, &req)
 	if err != nil {
 		logger.ZapLogger.Errorw("Validation Error", "Error", err)
 		return
 	}
 	p.logger = p.logger.With(
-				"MsgId", request.MsgId, 
+				"MsgId", req.MsgId, 
 			)
 	p.logger.Infow("Request",
 		"body", string(data),
 	)
-
-	logger.ZapLogger.Infoln("Exit JoinGame Validation")
-	return
-}
-
-
-func (p *JoinGame) ProcessMsg(req any) (resp []byte, err error) {
-	logger.ZapLogger.Infoln("Enter JoinGame Processor")
-	body := req.(*models.ReqJoinGame)
-	player := body.Player
+// Proc msg
+	player := req.Player
 	var generalResp *models.GeneralResp
 	var respJoinGame models.RespJoinGame
 
-	p.logger.Infof("Match Id: %v", body.MatchId)
+	p.logger.Infof("Match Id: %v", req.MatchId)
 	respJoinGame.Joined = "TRUE"
 	generalResp = &models.GeneralResp{
 		Message: "",
@@ -61,10 +37,10 @@ func (p *JoinGame) ProcessMsg(req any) (resp []byte, err error) {
 
 	}
 
-	gameId, err := p.db.GetGameFromMatchId(body.MatchId)
+	gameId, err := p.db.GetGameFromMatchId(req.MatchId)
 	if err != nil {
 		logger.ZapLogger.Errorw("DB Error", "Error", err)
-		p.logger.Infow("Could not found the Game with this Match Id", "MatchId", body.MatchId)
+		p.logger.Infow("Could not found the Game with this Match Id", "MatchId", req.MatchId)
 
 		respJoinGame.Joined = "FALSE"
 		respJoinGame.GeneralResp = generalResp
@@ -88,7 +64,5 @@ func (p *JoinGame) ProcessMsg(req any) (resp []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-
-	logger.ZapLogger.Infoln("Exit JoinGame Processor")
 	return
 }

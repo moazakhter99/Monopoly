@@ -49,12 +49,13 @@ func main() {
 
 	}
 
-	healthReq := service.CreateHealthReq(MonopolyDB)
-	healthHandler := handler.NewGameController(healthReq)
+	reqProc := service.CreateNewRequestProcessor(MonopolyDB, logger.ZapLogger)
+
+	healthHandler := handler.NewGameController(reqProc)
 	router.HandleFunc("/health", healthHandler.GameHandler).Methods("GET")
 
 	gameRouter := router.PathPrefix("/game").Subrouter()
-	routes.GameSubRouter(gameRouter, MonopolyDB, logger.ZapLogger)
+	routes.GameSubRouter(gameRouter, reqProc)
 
 	http.ListenAndServe(":"+port, router)
 
