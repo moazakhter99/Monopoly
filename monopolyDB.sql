@@ -11,7 +11,8 @@ create table if not exists game_board (
 
 create table if not exists game(
     game_id varchar(255),
-    match_id varchar(255)
+    match_id varchar(255),
+    event varchar(255)
 
 );
 

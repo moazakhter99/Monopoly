@@ -49,6 +49,7 @@ func (p *GameReq) Validate(data []byte) (req any, err error) {
 func (p *GameReq) ProcessMsg(req any) (resp []byte, err error) {
 	logger.ZapLogger.Infoln("Enter CreateGame Processor")
 	body := req.(*models.ReqCreateGame)
+	player := body.Player
 	var generalResp *models.GeneralResp
 	var respCreateGame models.RespCreateGame
 
@@ -65,19 +66,21 @@ func (p *GameReq) ProcessMsg(req any) (resp []byte, err error) {
 
 	err = p.db.InsertGame(body.GameId, body.MatchId)
 	if err != nil {
-		p.logger.Error("Error %v", err)
-		generalResp = &models.GeneralResp{
-			Message: err.Error(),
-			Code: "500",
-			Status: "FAILURE",
-		}
-		
+		p.logger.Errorw("DB Error", "Error", err)
+		return	
+	}
+
+	p.logger.Infow("Player Info", "PlayerID", player.PlayerId, "Name", player.Name, "Position", player.Pos)
+	err = p.db.InsertPlayer(player, body.GameId)
+	if err != nil {
+		p.logger.Errorw("DB Error", "Error", err)
+		return
 	}
 
 	respCreateGame.GeneralResp = generalResp
 	resp, err = json.Marshal(respCreateGame)
 	if err != nil {
-		return nil, err
+		return 
 	}
 
 	logger.ZapLogger.Infoln("Exit CreateGame Processor")

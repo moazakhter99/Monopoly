@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	models "Monopoly/Models"
 	"Monopoly/logger"
 	"database/sql"
 	"fmt"
@@ -54,5 +55,21 @@ func (p *Postgres) InsertGame(gameId, matchId string) (err error) {
 	logger.ZapLogger.Infoln("Enter Insert Game")
 
 	logger.ZapLogger.Infoln("Exit Insert Game")
+	return
+}
+
+
+func (p *Postgres) InsertPlayer(player *models.Player, gameId string) (err error) {
+	logger.ZapLogger.Infoln("Enter InsertPlayer DB")
+
+	logger.ZapLogger.Infoln("Exit InsertPlayer DB")
+	return
+}
+
+
+func (p *Postgres) GetGameFromMatchId(matchId string) (gameId string, err error) {
+	logger.ZapLogger.Infoln("Enter GetgameFromMatchId DB")
+
+	logger.ZapLogger.Infoln("Exit GetgameFromMatchId DB")
 	return
 }

@@ -1,6 +1,7 @@
 package sqlLite
 
 import (
+	models "Monopoly/Models"
 	"Monopoly/logger"
 	"context"
 	"database/sql"
@@ -57,7 +58,7 @@ func (l *SqlLite) Ping() (err error) {
 }
 
 func (l *SqlLite) InsertGame(gameId, matchId string) (err error) {
-	logger.ZapLogger.Infoln("Enter Create Game")
+	logger.ZapLogger.Infoln("Enter InsertGame DB")
 
 	query := `INSERT INTO game (game_id, match_id) VALUES (?, ?)`
 
@@ -84,6 +85,60 @@ func (l *SqlLite) InsertGame(gameId, matchId string) (err error) {
 		return
 	}
 
-	logger.ZapLogger.Infoln("Exit Create Game")
+	logger.ZapLogger.Infoln("Exit InsertGame DB")
+	return
+}
+
+
+func (l *SqlLite) InsertPlayer(player *models.Player, gameId string) (err error) {
+	logger.ZapLogger.Infoln("Enter InsertPlayer DB")
+
+	query := `INSERT INTO player (player_id, player_name, position, gameId, cash) VALUES (?, ?, ?, ?, ?)`
+
+	ctx, cancelF := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelF()
+	txn, err := l.DB.BeginTx(ctx, nil)
+	if err != nil {
+		logger.ZapLogger.Errorw("Begin Transaction", "Error", err)
+		txn.Rollback()
+		return
+	}
+
+	_, err = txn.Exec(query, player.PlayerId, player.Name, player.Pos, gameId, player.Cash)
+	if err != nil {
+		logger.ZapLogger.Errorw("DB Insert", "Error", err)
+		txn.Rollback()
+		return
+	}
+
+	err = txn.Commit()
+	if err != nil {
+		logger.ZapLogger.Errorw("DB Commit", "Error", err)
+		txn.Rollback()
+		return
+	}
+
+	logger.ZapLogger.Infoln("Exit InsertPlayer DB")
+	return
+}
+
+
+func (l *SqlLite) GetGameFromMatchId(matchId string) (gameId string, err error) {
+	logger.ZapLogger.Infoln("Enter GetgameFromMatchId DB")
+
+	query := `SELECT game_id FROM game WHERE match_id = ?`
+
+	row := l.DB.QueryRow(query, matchId)
+
+	var game_id sql.NullString
+
+	err = row.Scan(&game_id)
+	if err != nil {
+		logger.ZapLogger.Errorw("DB Select", "Error", err)
+		return
+	}
+	gameId = game_id.String
+
+	logger.ZapLogger.Infoln("Exit GetgameFromMatchId DB")
 	return
 }

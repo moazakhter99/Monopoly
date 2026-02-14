@@ -10,12 +10,14 @@ import (
 )
 
 
-
-
 var GameSubRouter = func (router *mux.Router, monopolyDB db.DbOperations, logger *zap.SugaredLogger) {
 
 	createGameReq := service.CreateGameReq(monopolyDB, logger)
-	gameReqHandler := handler.NewGameController(createGameReq)
-	router.HandleFunc("/create", gameReqHandler.GameHandler).Methods("POST")
+	createGameHandler := handler.NewGameController(createGameReq)
+	router.HandleFunc("/create", createGameHandler.GameHandler).Methods("POST")
+
+	joinGameReq := service.CreateJoinGameReq(monopolyDB, logger)
+	joinGameHandler := handler.NewGameController(joinGameReq)
+	router.HandleFunc("/join", joinGameHandler.GameHandler).Methods("POST")
 
 }
