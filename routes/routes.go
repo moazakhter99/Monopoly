@@ -3,7 +3,7 @@ package routes
 import (
 	"Monopoly/DB"
 	handler "Monopoly/Handler"
-	"Monopoly/Service/gameService"
+	"Monopoly/Service"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
