@@ -3,6 +3,7 @@ package handler
 import (
 	service "Monopoly/Service"
 	"Monopoly/logger"
+
 	// "io"
 	"net/http"
 
@@ -15,20 +16,22 @@ var upgrader = websocket.Upgrader{
 }
 
 type HandleWsGameController struct {
-	Processor service.RequestProcessor
+	// Processor service.RequestProcessor
+	// client *client.Client
+	gameHub service.GameHubProcessor
 
 }
 
-func NewWsGameController(proccesor service.RequestProcessor) *HandleWsGameController {
+func NewWsGameController(gameHub service.GameHubProcessor) *HandleWsGameController {
 	return &HandleWsGameController{
-		Processor: proccesor,
+		gameHub: gameHub,
 
 	}
 
 }
 
 
-func (game *HandleWsGameController) GameHandler(w http.ResponseWriter, r *http.Request) {
+func (game *HandleWsGameController) WSHandler(w http.ResponseWriter, r *http.Request) {
 	logger.ZapLogger.Infoln("Enter Game WebSockert handler")
 
 	if r.Header.Get("Upgrade") != "websocket" {
@@ -43,6 +46,19 @@ func (game *HandleWsGameController) GameHandler(w http.ResponseWriter, r *http.R
 	}
 	defer conn.Close()
 
+	playerId := ""
+	gameId := ""
+	gameLog := logger.ZapLogger.With(
+		"Player", playerId,
+		"GameId", gameId,
+	)
+
+	client := service.CreateNewClient(playerId, conn, gameLog)
+
+	go client.ReadMessage()
+	go client.WriteMessage()
+
+	// go game.gameHub.ProcessEvent("")
 
 
 }
