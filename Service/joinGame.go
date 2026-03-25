@@ -1,29 +1,52 @@
 package service
 
 import (
+	db "Monopoly/DB"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+
+	"go.uber.org/zap"
 )
 
 
 
-func (p RequestProcessor) JoinGame(data []byte) (resp []byte, err error) {
+type JoinGame struct {
+	db db.DbOperations
+	logger *zap.SugaredLogger
+}
 
-// Validate
-	var req models.ReqJoinGame
-	err = json.Unmarshal(data, &req)
+func CreateJoinGameReq(db db.DbOperations, logger *zap.SugaredLogger) *JoinGame {
+	return &JoinGame{
+		db: db,
+		logger: logger,
+	}
+}
+
+
+func (p *JoinGame) Validate(data []byte) (req any, err error) {
+	logger.ZapLogger.Infoln("Enter JoinGame Validation")
+	var request models.ReqJoinGame
+	err = json.Unmarshal(data, &request)
 	if err != nil {
 		logger.ZapLogger.Errorw("Validation Error", "Error", err)
 		return
 	}
 	p.logger = p.logger.With(
-				"MsgId", req.MsgId, 
+				"MsgId", request.MsgId, 
 			)
 	p.logger.Infow("Request",
 		"body", string(data),
 	)
-// Proc msg
+
+	logger.ZapLogger.Infoln("Exit JoinGame Validation")
+	return &request, err
+}
+
+
+func (p *JoinGame) ProcessMsg(body any) (resp []byte, err error) {
+
+	req := body.(*models.ReqJoinGame)
 	player := req.Player
 	var generalResp *models.GeneralResp
 	var respJoinGame models.RespJoinGame

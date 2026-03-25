@@ -1,31 +1,53 @@
 package service
 
 import (
+	db "Monopoly/DB"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
 	"time"
 
+	"go.uber.org/zap"
 )
 
+type GameReq struct {
+	db db.DbOperations
+	logger *zap.SugaredLogger
+}
 
-func (p *RequestProcessor) CreateGame(data []byte) (resp []byte, err error) {
+func CreateGameReq(db db.DbOperations, logger *zap.SugaredLogger) *GameReq {
+	return &GameReq{
+		db: db,
+		logger: logger,
+	}
+}
 
-// Validate
-	var req models.ReqCreateGame
-	err = json.Unmarshal(data, &req)
+
+func (p *GameReq) Validate(data []byte) (req any, err error) {
+	logger.ZapLogger.Infoln("Enter CreateGame Validation")
+	var request models.ReqCreateGame
+	err = json.Unmarshal(data, &request)
 	if err != nil {
 		logger.ZapLogger.Errorw("validation Error", "Error", err)
 		return
 	}
 	p.logger = p.logger.With(
-				"MsgId", req.MsgId, 
-				"GameId", req.GameId,
+				"MsgId", request.MsgId, 
+				"GameId", request.GameId,
 			)
 	p.logger.Infow("Request",
 		"body", string(data),
 	)
-//ProcMsg
+
+	logger.ZapLogger.Infoln("Exit CreateGame Validation")
+	return &request, err
+}
+
+
+func (p *GameReq) ProcessMsg(body any) (resp []byte, err error) {
+
+	req := body.(*models.ReqCreateGame)
+
 	player := req.Player
 	var generalResp *models.GeneralResp
 	var respCreateGame models.RespCreateGame

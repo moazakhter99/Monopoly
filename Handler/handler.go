@@ -12,10 +12,10 @@ type Controller interface {
 }
 
 type HandleGameController struct {
-	Processor service.RequestProcessor
+	Processor service.Processor
 }
 
-func NewGameController(processor service.RequestProcessor) *HandleGameController {
+func NewGameController(processor service.Processor) *HandleGameController {
 	return &HandleGameController{
 		Processor: processor,
 	}
@@ -32,20 +32,16 @@ func (game *HandleGameController) GameHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var resp []byte
-	uri := r.URL.Path	
-
-	switch uri {
-	case "/health":
-		resp, err = game.Processor.Health()
-
-	case "/game/create":
-		resp, err = game.Processor.CreateGame(body)
-
-	case "/game/join":
-		resp, err = game.Processor.JoinGame(body)
-
+	req, err := game.Processor.Validate(body)
+	if err != nil {
+		logger.ZapLogger.Errorw("Request Validation", "Error", err)
 	}
+
+	resp, err := game.Processor.ProcessMsg(req)
+	if err != nil {
+		logger.ZapLogger.Errorw("Request Proccessing", "Error", err)
+	}
+
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
