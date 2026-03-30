@@ -5,6 +5,7 @@ import (
 	"Monopoly/DB/postgres"
 	"Monopoly/DB/sqlLite"
 	handler "Monopoly/Handler"
+	// models "Monopoly/Models"
 	service "Monopoly/Service"
 	"Monopoly/load"
 	"Monopoly/logger"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	// "github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 )
 
@@ -49,7 +51,7 @@ func main() {
 
 	}
 
-	reqProc := service.CreateNewRequestProcessor(MonopolyDB, logger.ZapLogger)
+	// reqProc := service.CreateNewRequestProcessor(MonopolyDB, logger.ZapLogger)
 
 	healthReq := service.CreateHealthReq(MonopolyDB)
 	healthHandler := handler.NewGameController(healthReq)
@@ -58,13 +60,25 @@ func main() {
 	initGameRouter := router.PathPrefix("/initGame").Subrouter()
 	routes.InitGameSubRouter(initGameRouter, MonopolyDB, logger.ZapLogger)
 
-	gameRouter := router.PathPrefix("/game").Subrouter()
-	routes.GameSubRouter(gameRouter, reqProc)
+	// gameRouter := router.PathPrefix("/game").Subrouter()
+	// routes.GameSubRouter(gameRouter, reqProc)
 	
-	wsProc := service.CreateNewGameHub(logger.ZapLogger)
-	wsHandler := handler.NewWsGameController(wsProc)
+	gameHub := service.CreateNewGameHub(logger.ZapLogger)
+	go run(gameHub)
+	
+	wsClientProc := service.CreateNewClient(logger.ZapLogger, gameHub)
+	wsHandler := handler.NewWsGameController(wsClientProc)
 	router.HandleFunc("/ws", wsHandler.WSHandler)
 
 	http.ListenAndServe(":"+port, router)
+
+}
+
+
+func run(hub *service.GameHub) {
+	for {
+		msg := <- hub.ReadMsg
+		hub.ProcessEvent(msg)
+	}
 
 }

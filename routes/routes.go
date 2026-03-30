@@ -28,7 +28,7 @@ var InitGameSubRouter = func (router *mux.Router, db db.DbOperations, logger *za
 
 }
 
-var GameSubRouter = func (router *mux.Router, proc service.RequestProcessor) {
+// var GameSubRouter = func (router *mux.Router, proc service.RequestProcessor) {
 
 
-}
+// }

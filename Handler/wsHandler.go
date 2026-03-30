@@ -17,14 +17,14 @@ var upgrader = websocket.Upgrader{
 
 type HandleWsGameController struct {
 	// Processor service.RequestProcessor
-	// client *client.Client
-	gameHub service.GameHubProcessor
+	clinetProc service.ClinetProcessor
+	// gameHub service.GameHubProcessor
 
 }
 
-func NewWsGameController(gameHub service.GameHubProcessor) *HandleWsGameController {
+func NewWsGameController(clinetProc service.ClinetProcessor) *HandleWsGameController {
 	return &HandleWsGameController{
-		gameHub: gameHub,
+		clinetProc: clinetProc,
 
 	}
 
@@ -44,7 +44,7 @@ func (game *HandleWsGameController) WSHandler(w http.ResponseWriter, r *http.Req
 		logger.ZapLogger.Errorw("WebSockert Upgrade", "'Error", err)
 		return
 	}
-	defer conn.Close()
+	// defer conn.Close()
 
 	playerId := ""
 	gameId := ""
@@ -53,10 +53,14 @@ func (game *HandleWsGameController) WSHandler(w http.ResponseWriter, r *http.Req
 		"GameId", gameId,
 	)
 
-	client := service.CreateNewClient(playerId, conn, gameLog)
+	// game.gameHub.ProcessEvent("")
 
-	go client.ReadMessage()
-	go client.WriteMessage()
+	game.clinetProc.UpgradeClinet(playerId, conn, gameLog)
+	// client := service.CreateNewClient(playerId, conn, gameLog)
+	
+
+	go game.clinetProc.ReadMessage()
+	go game.clinetProc.WriteMessage()
 
 	// go game.gameHub.ProcessEvent("")
 

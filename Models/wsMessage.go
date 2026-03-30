@@ -13,3 +13,7 @@ type WsError struct {
 	Message string
 	WsError int
 }
+
+type WsPayload struct {
+	
+}
