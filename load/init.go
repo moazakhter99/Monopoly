@@ -9,6 +9,7 @@ import (
 
 
 func Env() {
+	log.Println("Starting Server...")
 	// loading the .env file
 	masterEnv := os.Getenv("MONOPOLY_ENV")
 

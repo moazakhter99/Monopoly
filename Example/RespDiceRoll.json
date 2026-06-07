@@ -1,0 +1,8 @@
+{
+    "type": "ROLL_DICE",
+    "payload": {
+        "player_id": "123",
+        "game_id": "ABC",
+        "dice_val": 7
+    }
+}

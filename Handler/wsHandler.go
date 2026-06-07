@@ -17,14 +17,15 @@ var upgrader = websocket.Upgrader{
 
 type HandleWsGameController struct {
 	// Processor service.RequestProcessor
-	clinetProc service.ClinetProcessor
-	// gameHub service.GameHubProcessor
+	// gameHub service.ClinetProcessor
+	gameHub service.GameHubProcessor
+	hub *service.GameHub
 
 }
 
-func NewWsGameController(clinetProc service.ClinetProcessor) *HandleWsGameController {
+func NewWsGameController(hub *service.GameHub) *HandleWsGameController {
 	return &HandleWsGameController{
-		clinetProc: clinetProc,
+		hub: hub,
 
 	}
 
@@ -38,31 +39,38 @@ func (game *HandleWsGameController) WSHandler(w http.ResponseWriter, r *http.Req
 		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
 		return
 	}
+	logger.ZapLogger.Infoln("level 1")
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		logger.ZapLogger.Errorw("WebSockert Upgrade", "'Error", err)
 		return
 	}
+	logger.ZapLogger.Infoln("level 2")
 	// defer conn.Close()
 
-	playerId := ""
-	gameId := ""
+	// playerId := r.Context().Value("playerId").(string)
+    gameId := r.URL.Query().Get("gameId")
+    playerId := r.URL.Query().Get("playerId")
 	gameLog := logger.ZapLogger.With(
 		"Player", playerId,
 		"GameId", gameId,
 	)
+	logger.ZapLogger.Infoln("level 3")
 
 	// game.gameHub.ProcessEvent("")
 
-	game.clinetProc.UpgradeClinet(playerId, conn, gameLog)
-	// client := service.CreateNewClient(playerId, conn, gameLog)
-	
+	// game.gameHub.UpgradeClinet(playerId, conn, gameLog)
+	client := service.CreateNewClient(playerId, conn, gameLog, game.hub)
+	logger.ZapLogger.Infoln("level 4")
+	game.hub.Register <- client
+	logger.ZapLogger.Infow("Player Created", "playerId", playerId, "GameId", gameId)
 
-	go game.clinetProc.ReadMessage()
-	go game.clinetProc.WriteMessage()
+
+	go client.ReadMessage()
+	go client.WriteMessage()
 
 	// go game.gameHub.ProcessEvent("")
 
-
+	logger.ZapLogger.Infoln("Exit Game WebSocket handler")
 }

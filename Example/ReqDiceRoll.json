@@ -1,0 +1,7 @@
+{
+    "type": "ROLL_DICE",
+    "payload": {
+        "player_id": "123",
+        "game_id": "ABC"
+    }
+}

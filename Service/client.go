@@ -22,23 +22,16 @@ type Client struct {
 	
 }
 
-func CreateNewClient(logger *zap.SugaredLogger, hub *GameHub) *Client {
+func CreateNewClient(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger, hub *GameHub) *Client {
 	return &Client{
 		logger: logger,
 		ReadMsg: make(chan models.WSMessage),
 		WriteMsg: make(chan models.WSMessage),
 		ErrMsg: make(chan string),
-		// PlayerId: playerId,
-		// Conn: conn,
+		PlayerId: playerId,
+		Conn: conn,
 		gameHub: hub,
 	}
-}
-
-
-func (c *Client) UpgradeClinet(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger) {
-	c.Conn = conn
-	c.PlayerId = playerId
-	c.logger = logger
 }
 
 
@@ -46,7 +39,7 @@ func (c *Client) ReadMessage() {
 	c.logger.Infoln("Enter Read WS Message")
 	var message models.WSMessage
 	defer func ()  {
-		c.ErrMsg <- c.PlayerId
+		c.gameHub.Deregister <- c
 	}() 
 
 	for {
@@ -69,11 +62,11 @@ func (c *Client) ReadMessage() {
 func (c *Client) WriteMessage() {
 	c.logger.Infoln("Enter Write WS Message")
 	defer func ()  {
-		c.ErrMsg <- c.PlayerId
+		c.gameHub.Deregister <- c
 	}()
 
 	for {
-		message, ok := <- c.gameHub.WriteMsg
+		message, ok := <- c.WriteMsg
 		if !ok {
 			wsError := models.WsError{
 				Message: "",

@@ -17,7 +17,6 @@ var InitGameSubRouter = func (router *mux.Router, db db.DbOperations, logger *za
 	createGameReqHandler := handler.NewGameController(createGameReq)
 	router.HandleFunc("/create", createGameReqHandler.GameHandler).Methods("POST")
 
-
 	joinGameReq := service.CreateJoinGameReq(db, logger)
 	joinGameHandler := handler.NewGameController(joinGameReq)
 	router.HandleFunc("/join", joinGameHandler.GameHandler).Methods("POST")

@@ -5,6 +5,7 @@ import (
 	"Monopoly/DB/postgres"
 	"Monopoly/DB/sqlLite"
 	handler "Monopoly/Handler"
+
 	// models "Monopoly/Models"
 	service "Monopoly/Service"
 	"Monopoly/load"
@@ -64,11 +65,12 @@ func main() {
 	// routes.GameSubRouter(gameRouter, reqProc)
 	
 	gameHub := service.CreateNewGameHub(logger.ZapLogger)
-	go run(gameHub)
+	// go gameHub.Deregister()
 	
-	wsClientProc := service.CreateNewClient(logger.ZapLogger, gameHub)
-	wsHandler := handler.NewWsGameController(wsClientProc)
+	// wsClientProc := service.CreateNewClient(logger.ZapLogger, gameHub)
+	wsHandler := handler.NewWsGameController(gameHub)
 	router.HandleFunc("/ws", wsHandler.WSHandler)
+	go run(gameHub)
 
 	http.ListenAndServe(":"+port, router)
 
@@ -76,9 +78,21 @@ func main() {
 
 
 func run(hub *service.GameHub) {
+	logger.ZapLogger.Infoln("Hub is running")
 	for {
-		msg := <- hub.ReadMsg
-		hub.ProcessEvent(msg)
+
+		select {
+		case msg := <- hub.ReadMsg:
+			hub.ProcessEvent(msg)
+
+		case player := <- hub.Register:
+			logger.ZapLogger.Infoln(player)
+			hub.ClientMap[player.PlayerId] = player
+
+		case player := <- hub.Deregister:
+			delete(hub.ClientMap, player.PlayerId)
+
+		}
 	}
 
 }

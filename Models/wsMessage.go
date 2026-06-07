@@ -14,6 +14,14 @@ type WsError struct {
 	WsError int
 }
 
-type WsPayload struct {
-	
+type ReqDiceRoll struct {
+	PlayerId string `json:"player_id"`
+	GameId string `json:"game_id"`
 }
+
+type RespDiceRoll struct {
+	PlayerId string `json:"player_id"`
+	GameId string `json:"game_id"`
+	DiceVal int `json:"dice_val"`
+}
+
