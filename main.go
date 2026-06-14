@@ -64,7 +64,7 @@ func main() {
 	// gameRouter := router.PathPrefix("/game").Subrouter()
 	// routes.GameSubRouter(gameRouter, reqProc)
 	
-	gameHub := service.CreateNewGameHub(logger.ZapLogger)
+	gameHub := service.CreateNewGameHub(logger.ZapLogger, MonopolyDB)
 	// go gameHub.Deregister()
 	
 	// wsClientProc := service.CreateNewClient(logger.ZapLogger, gameHub)
@@ -79,6 +79,7 @@ func main() {
 
 func run(hub *service.GameHub) {
 	logger.ZapLogger.Infoln("Hub is running")
+	logger.ZapLogger.Infoln("Hub ID ", hub.Id)
 	for {
 
 		select {

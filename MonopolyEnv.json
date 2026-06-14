@@ -1,5 +1,5 @@
 {
     "PORT":"3000",
-    "DATABASE":"SQLLITE",
+    "DATABASE":"POSTGRES",
     "LOG_FILEPATH":"./monopoly.log"
 }

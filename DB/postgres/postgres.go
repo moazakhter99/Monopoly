@@ -4,36 +4,44 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"database/sql"
-	"fmt"
+	// "fmt"
 
-	"github.com/spf13/viper"
+	// "github.com/spf13/viper"
 )
 
 type Postgres struct {
 	DB *sql.DB
 }
 
+// GetPlayerPos implements [db.DbOperations].
+func (p *Postgres) GetPlayerPos(playerId string) (currPos int, err error) {
+	currPos = 5
+	return
+}
+
 func OpenDatabase() (*Postgres, error) {
 
 	logger.ZapLogger.Infoln("Inside Open DB connection")
 
-	host := viper.GetString("DB.DB_HOSTNAME")
-	port := viper.GetString("DB.DB_PORT")
-	user := viper.GetString("DB.DB_USER")
-	password := viper.GetString("DB.DB_PASSWORD")
-	dbname := viper.GetString("DB.DB_NAME")
-	psqlSSLMode := viper.GetString("DB.PSQL_SSL_MODE")
+	// host := viper.GetString("DB.DB_HOSTNAME")
+	// port := viper.GetString("DB.DB_PORT")
+	// user := viper.GetString("DB.DB_USER")
+	// password := viper.GetString("DB.DB_PASSWORD")
+	// dbname := viper.GetString("DB.DB_NAME")
+	// psqlSSLMode := viper.GetString("DB.PSQL_SSL_MODE")
 
-	psqlconn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, psqlSSLMode)
-	db, err := sql.Open("postgres", psqlconn)
-	if err != nil {
-		logger.ZapLogger.Fatalw("Database Open", "Err", err)
-		return nil, err
-	}
+	// psqlconn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, user, password, dbname, psqlSSLMode)
+	// db, err := sql.Open("postgres", psqlconn)
+	// if err != nil {
+	// 	logger.ZapLogger.Fatalw("Database Open", "Err", err)
+	// 	return nil, err
+	// }
 
+	// Testing
+	db := &sql.DB{}
 	data := &Postgres{DB: db}
 
-	return data, err
+	return data, nil
 }
 
 func (p *Postgres) Ping() (err error) {
@@ -50,7 +58,6 @@ func (p *Postgres) Ping() (err error) {
 	return
 }
 
-
 func (p *Postgres) InsertGame(gameId, matchId string) (err error) {
 	logger.ZapLogger.Infoln("Enter Insert Game")
 
@@ -58,14 +65,12 @@ func (p *Postgres) InsertGame(gameId, matchId string) (err error) {
 	return
 }
 
-
 func (p *Postgres) InsertPlayer(player *models.Player, gameId string) (err error) {
 	logger.ZapLogger.Infoln("Enter InsertPlayer DB")
 
 	logger.ZapLogger.Infoln("Exit InsertPlayer DB")
 	return
 }
-
 
 func (p *Postgres) GetGameFromMatchId(matchId string) (gameId string, err error) {
 	logger.ZapLogger.Infoln("Enter GetgameFromMatchId DB")

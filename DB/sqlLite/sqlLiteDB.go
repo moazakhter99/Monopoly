@@ -142,3 +142,24 @@ func (l *SqlLite) GetGameFromMatchId(matchId string) (gameId string, err error) 
 	logger.ZapLogger.Infoln("Exit GetgameFromMatchId DB")
 	return
 }
+
+
+func (l *SqlLite) GetPlayerPos(playerId string) (currPos int, err error) {
+	logger.ZapLogger.Infoln("Enter GetPlayerPos DB")
+
+	query := `SELECT position FROM player WHERE player_id = ?`
+
+	row := l.DB.QueryRow(query, playerId)
+
+	var position sql.NullInt16
+
+	err = row.Scan(&position)
+	if err != nil {
+		return
+	}
+
+	currPos = int(position.Int16)
+
+	return	
+
+}

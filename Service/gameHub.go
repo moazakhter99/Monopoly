@@ -1,12 +1,10 @@
 package service
 
 import (
-	// models "Monopoly/Models"
-	// client "Monopoly/Client"
+	db "Monopoly/DB"
 	gameplay "Monopoly/Gameplay"
 	models "Monopoly/Models"
 	"Monopoly/logger"
-	"encoding/json"
 
 	"go.uber.org/zap"
 )
@@ -14,6 +12,7 @@ import (
 
 
 type GameHub struct {
+	Id string
 	logger *zap.SugaredLogger
 	// clinet *Client
 	ReadMsg chan models.WSMessage
@@ -21,18 +20,21 @@ type GameHub struct {
 	ClientMap map[string]*Client
 	Register chan *Client
 	Deregister chan *Client
+	db *db.DbOperations
 
 }
 
 
-func CreateNewGameHub(logger *zap.SugaredLogger) *GameHub {
+func CreateNewGameHub(logger *zap.SugaredLogger, db db.DbOperations) *GameHub {
 	return &GameHub{
+		Id: "hub123",
 		logger: logger,
-		ReadMsg: make(chan models.WSMessage),
-		WriteMsg: make(chan models.WSMessage),
+		ReadMsg: make(chan models.WSMessage, 2),
+		WriteMsg: make(chan models.WSMessage, 2),
 		ClientMap: map[string]*Client{},
 		Register: make(chan *Client),
 		Deregister: make(chan *Client),
+		db: &db,
 	}
 }
 
@@ -41,7 +43,7 @@ func (h *GameHub) ProcessEvent(message any) {
 
 	var respMsg models.WSMessage
 	var respByte []byte
-	var playerId string
+	all := true
 
 	wsMsg := message.(models.WSMessage)
 	h.logger.Infow("ReadMsg", "Type", wsMsg.Type, "Message", string(wsMsg.Payload))
@@ -49,26 +51,12 @@ func (h *GameHub) ProcessEvent(message any) {
 	switch wsMsg.Type {
 
 	case models.ROLLDICE:
-		logger.ZapLogger.Infoln("Roll Dice")
-		var req models.ReqDiceRoll
 
-		err := json.Unmarshal(wsMsg.Payload, &req)
-		if err != nil {
-			logger.ZapLogger.Errorw("UnMarshal Error", "Errror", err)
-		}
-		playerId = req.PlayerId
-
-		diceVal := gameplay.DiceRoll()
-
-		resp := models.RespDiceRoll{
-			PlayerId: playerId,
-			GameId: req.GameId,
-			DiceVal: diceVal,
-		}
-		respByte, _ = json.Marshal(resp)
+		respByte = gameplay.RollDice(wsMsg.Payload, h.ReadMsg)
 
 	case models.MOVEPOS:
-		return
+
+		respByte = gameplay.MovePos(wsMsg.Payload, *h.db)
 
 	case models.BUY:
 		return
@@ -81,8 +69,13 @@ func (h *GameHub) ProcessEvent(message any) {
 	respMsg.Payload = respByte
 	respMsg.Type = wsMsg.Type
 
-	client := h.ClientMap[playerId]
-	client.WriteMsg <- respMsg
+	if all {
+		for _, cl := range h.ClientMap {
+			cl.WriteMsg <- respMsg
+
+		}
+	}
+
 
 	logger.ZapLogger.Infoln("Exit ProcessEvent")
 }

@@ -8,5 +8,6 @@ type DbOperations interface {
 	InsertGame(gameId, matchId string) (err error)
 	InsertPlayer(player *models.Player, gameId string) (err error)
 	GetGameFromMatchId(matchId string) (gameId string, err error)
+	GetPlayerPos(playerId string) (currPos int, err error)
 
 }
