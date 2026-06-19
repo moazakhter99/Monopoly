@@ -1,0 +1,8 @@
+{
+    "type": "MOVE_POS",
+    "payload": {
+        "player_id":"player2",
+        "game_id":"ABC",
+        "update_by":6
+    }
+}

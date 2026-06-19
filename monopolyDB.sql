@@ -16,3 +16,12 @@ create table if not exists game(
 
 );
 
+create table if not exists block_info (
+    info_id varchar(255) primary key not  null,
+    block_type varchar(255),
+    info_no int,
+    block_info text,
+    action varchar(255)
+
+);
+

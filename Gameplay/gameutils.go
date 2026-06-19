@@ -1,6 +1,8 @@
 package gameplay
 
-import "math/rand/v2"
+import (
+	"math/rand/v2"
+)
 
 
 func diceRoll() (diceVal int) {

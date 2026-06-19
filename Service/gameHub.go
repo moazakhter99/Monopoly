@@ -58,11 +58,13 @@ func (h *GameHub) ProcessEvent(message any) {
 
 		respByte = gameplay.MovePos(wsMsg.Payload, *h.db)
 
-	case models.BUY:
-		return
+	case models.BUYBLOCK:
+
+		respByte = gameplay.BuyBlock(wsMsg.Payload, *h.db)
+
+	case models.RENT:
 
 	case models.SELL:
-		return
 	
 	}
 

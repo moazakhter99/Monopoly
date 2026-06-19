@@ -1,0 +1,11 @@
+{
+    "type": "BUY",
+    "payload": {
+        "player_id":"player2",
+        "game_id":"game1",
+        "block_id": "block12",
+        "Price": 1200,
+        "Colour": ""
+
+    }
+}

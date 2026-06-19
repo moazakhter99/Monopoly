@@ -5,7 +5,6 @@ import (
 	"Monopoly/logger"
 	"database/sql"
 	// "fmt"
-
 	// "github.com/spf13/viper"
 )
 
@@ -13,9 +12,43 @@ type Postgres struct {
 	DB *sql.DB
 }
 
-// GetPlayerPos implements [db.DbOperations].
-func (p *Postgres) GetPlayerPos(playerId string) (currPos int, err error) {
-	currPos = 5
+// GetBlockInfoById implements [db.DbOperations].
+func (p *Postgres) GetBlockInfoById(blockId string) (block *models.Block, err error) {
+	block = &models.Block{
+		BlockId: "block11",
+		Price: 700,
+
+	}
+	return
+}
+
+// UpdatePlayerCard implements [db.DbOperations].
+func (p *Postgres) UpdatePlayerCard(playerId string, gameId string, blockId string) (err error) {
+	return
+}
+
+// UpdatePlayerPos implements [db.DbOperations].
+func (p *Postgres) UpdatePlayerPos(playerId string, position int) (err error) {
+	return
+}
+
+// GetBlockState implements [db.DbOperations].
+func (p *Postgres) GetBlockState(position int, gameId string) (state bool, blockId string, err error) {
+	state = true
+	blockId = "block12"
+	return
+}
+
+// GetPlayerInfoById implements [db.DbOperations].
+func (p *Postgres) GetPlayerInfoById(playerId string) (player *models.Player, err error) {
+	player = &models.Player{
+		PlayerId: playerId,
+		Name:     "Moaz_" + playerId,
+		Pos:      5,
+		GameId:   "ABC",
+		Cash:     1500,
+		Seq:      1,
+	}
 	return
 }
 
