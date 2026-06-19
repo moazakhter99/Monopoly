@@ -12,12 +12,26 @@ type Postgres struct {
 	DB *sql.DB
 }
 
+// GetCardAction implements [db.DbOperations].
+func (p *Postgres) GetCardAction(cardNo string) (action string, err error) {
+	panic("unimplemented")
+}
+
+// GetPlayerCash implements [db.DbOperations].
+func (p *Postgres) GetPlayerCash(playerId string) (cash int, err error) {
+	panic("unimplemented")
+}
+
+// UpdatePlayerCash implements [db.DbOperations].
+func (p *Postgres) UpdatePlayerCash(playerId string, cash int) (err error) {
+	panic("unimplemented")
+}
+
 // GetBlockInfoById implements [db.DbOperations].
 func (p *Postgres) GetBlockInfoById(blockId string) (block *models.Block, err error) {
 	block = &models.Block{
 		BlockId: "block11",
-		Price: 700,
-
+		Price:   700,
 	}
 	return
 }
@@ -33,9 +47,7 @@ func (p *Postgres) UpdatePlayerPos(playerId string, position int) (err error) {
 }
 
 // GetBlockState implements [db.DbOperations].
-func (p *Postgres) GetBlockState(position int, gameId string) (state bool, blockId string, err error) {
-	state = true
-	blockId = "block12"
+func (p *Postgres) GetBlockState(position int, gameId string) (block *models.Block, er error) {
 	return
 }
 

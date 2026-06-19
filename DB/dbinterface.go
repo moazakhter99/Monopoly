@@ -9,7 +9,7 @@ type DbOperations interface {
 	InsertPlayer(player *models.Player, gameId string) (err error)
 	GetGameFromMatchId(matchId string) (gameId string, err error)
 	GetPlayerInfoById(playerId string) (player *models.Player, err error)
-	GetBlockState(position int, gameId string) (state bool, blockId string, err error)
+	GetBlockState(position int, gameId string) (block *models.Block, err error)
 	UpdatePlayerPos(playerId string, position int) (err error)
 	GetBlockInfoById(blockId string) (block *models.Block, err error)
 	UpdatePlayerCard(playerId, gameId, blockId string) (err error)

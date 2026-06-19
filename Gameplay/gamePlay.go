@@ -80,19 +80,20 @@ func MovePos(request json.RawMessage, db db.DbOperations) (response json.RawMess
 		logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
 	}
 
-	state, blockId, err := db.GetBlockState(newPos, req.GameId)
+	block, err := db.GetBlockState(newPos, req.GameId)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
 		return
 	}
-	logger.ZapLogger.Infow(models.MOVEPOS, "Block State", state, "New Position", newPos, "Block Id", blockId)
+	logger.ZapLogger.Infow(models.MOVEPOS, "Block State", block.State, "New Position", newPos, "Block Id", block.BlockId)
 
 	resp := models.RespMovePos{
 		PlayerId: req.PlayerId,
 		GameId:   req.GameId,
-		BlockId:  blockId,
+		BlockId:  block.BlockId,
 		NewPos:   newPos,
-		Sold:     state,
+		Sold:     block.State,
+		Type: 	  block.Type,
 	}
 
 	response, err = json.Marshal(resp)

@@ -5,6 +5,7 @@
         "game_id":"ABC",
         "new_pos": "11",
         "block_id": "block12",
+        "Type": "CITY",
         "sold": false
     }
 }

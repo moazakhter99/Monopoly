@@ -40,6 +40,7 @@ type RespMovePos struct {
 	NewPos   int    `json:"new_pos"`
 	BlockId  string `json:"block_id"`
 	Sold     bool   `json:"sold"`
+	Type 	 string `json:"type"`
 }
 
 type ReqBuyBlock struct {

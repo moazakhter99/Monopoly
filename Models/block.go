@@ -7,7 +7,7 @@ type Block struct {
 	Position int
 	BlockName string
 	Price int
-	State string
+	State bool
 	Status int
 	OwnerId string
 	Colour string 

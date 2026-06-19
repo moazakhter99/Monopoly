@@ -197,21 +197,25 @@ func (l *SqlLite) UpdatePlayerPos(playerId string, position int) (err error) {
 }
 
 
-func (l *SqlLite) GetBlockState(position int, gameId string) (state bool, blockId string, er error) {
+func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Block, er error) {
 
+	var state bool
 	var err error
-	query := `SELECT block_id from game_board where position = ?`
+	query := `SELECT block_id, block_tye from game_board where position = ?`
 
 	row := l.DB.QueryRow(query, position)
 
-	var block_id sql.NullString
+	var  (
+		block_id sql.NullString
+		block_type sql.NullString
+	)  
 
-	err = row.Scan(&block_id)
+	err = row.Scan(&block_id, &block_type)
 	if err != nil {
 		return
 	}
 
-	blockId = block_id.String
+	blockId := block_id.String
 
 	query2 := `SELECT player_id FROM game_player WHERE game_id = ? and card_id = ?`
 
@@ -222,14 +226,18 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (state bool, blockI
 	err = row2.Scan(&player_id)
 	if err == sql.ErrNoRows {
 		state = false
-		return
 	} else if err != nil {
 		er = err
-		return false, "", er
+		return nil, er
 	}
-
 	// playerId := player_id.String
 	state = true
+
+	block = &models.Block{
+		BlockId: blockId,
+		Type: block_type.String,
+		State: state,
+	}
 
 	return
 }
