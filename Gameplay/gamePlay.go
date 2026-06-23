@@ -5,6 +5,7 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"strconv"
 )
 
 func RollDice(request json.RawMessage, readCh chan<- models.WSMessage) (response json.RawMessage) {
@@ -93,7 +94,7 @@ func MovePos(request json.RawMessage, db db.DbOperations) (response json.RawMess
 		BlockId:  block.BlockId,
 		NewPos:   newPos,
 		Sold:     block.State,
-		Type: 	  block.Type,
+		Type:     block.Type,
 	}
 
 	response, err = json.Marshal(resp)
@@ -154,6 +155,181 @@ func BuyBlock(request json.RawMessage, db db.DbOperations) (response json.RawMes
 	response, err = json.Marshal(resp)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "JSON Error", err)
+		return
+	}
+
+	return
+}
+
+func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- models.WSMessage) (response json.RawMessage) {
+	logger.ZapLogger.Infoln("Enter Action Block")
+	var req models.ReqActionCard
+
+	err := json.Unmarshal(request, &req)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.ACTIONCARD, "JSON Error", err)
+		return
+	}
+
+	resp := models.RespActionCard{
+		PlayerId: req.PlayerId,
+		GameId:   req.GameId,
+	}
+
+	switch req.Type {
+
+	case models.COMMUNITYCHEST:
+		action, err := db.GetCardAction(req.CardId)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+			return
+		}
+
+		chestValue, err := strconv.Atoi(action)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.ACTIONCARD, "Conversion Error", err)
+			return
+		}
+		resp.Cash = req.Cash + chestValue
+
+	case models.CHANCE:
+		action, err := db.GetCardAction(req.CardId)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+			return
+		}
+
+		switch action {
+
+		case models.JUMPTOMUMBAI:
+			resp.Pos, err = db.GetPosByBlockName("Mumbai")
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+				return
+			}
+
+		case models.GOTOSTART:
+			resp.Pos, err = db.GetPosByBlockName("Go Start")
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+				return
+			}
+
+		case models.HOUSEHOTELFINE:
+			return
+
+		case models.GETOUTOFJAIL:
+			err = db.UpdateGetOutOfJailCard(req.PlayerId, req.GameId)
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+				return
+			}
+
+		default:
+			value, err := strconv.Atoi(action)
+			if err != nil {
+				logger.ZapLogger.Infow(models.ACTIONCARD, "Conversion Error", err, "Invalid Action", action)
+				return
+			}
+			resp.Cash = req.Cash + value
+
+		}
+
+	case models.INCOMETAX:
+		resp.Cash = req.Cash - req.Price
+
+	case models.JAIL:
+		resp.Pos = req.Pos
+
+		go func() {
+			jailInfo, err := db.GetBlockInfoByBlockType(models.JAIL)
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+				return
+			}
+
+			ownerId, err := db.GetCardOwnership(req.BlockId, req.GameId)
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+				return
+			}
+
+			reqjail := models.RespJail{
+				PlayerId:   req.PlayerId,
+				GameId:     req.GameId,
+				Jail:       jailInfo,
+				GetOutCard: ownershipConfirm(ownerId, req.PlayerId),
+				InJail:     true,
+			}
+
+			jailReq, err := json.Marshal(reqjail)
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
+				return
+			}
+
+			jailWsMsg := models.WSMessage{
+				Type:    models.JAIL,
+				Payload: jailReq,
+			}
+
+			readCh <- jailWsMsg
+
+		}()
+
+	case models.FREEPARKING:
+
+	case models.GOTOJAIL:
+
+		go func() {
+			jailInfo, err := db.GetBlockInfoByBlockType(models.JAIL)
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+				return
+			}
+
+			jailPos, err := db.GetPosByBlockName("Jail")
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+				return
+			}
+
+			reqjail := models.RespJail{
+				PlayerId: req.PlayerId,
+				GameId:   req.GameId,
+				Jail:     jailInfo,
+				NewPos:   jailPos,
+				// Get this from DB
+				GetOutCard: false,
+				InJail:     true,
+			}
+
+			jailReq, err := json.Marshal(reqjail)
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
+				return
+			}
+
+			jailWsMsg := models.WSMessage{
+				Type:    models.JAIL,
+				Payload: jailReq,
+			}
+
+			readCh <- jailWsMsg
+
+		}()
+
+	case models.PROPERTYTAX:
+		resp.Cash = req.Cash - req.Price
+
+	case models.GOTOSTART:
+		resp.Cash = req.Cash - req.Price
+
+	}
+
+	response, err = json.Marshal(resp)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
 		return
 	}
 

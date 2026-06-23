@@ -40,17 +40,16 @@ type RespMovePos struct {
 	NewPos   int    `json:"new_pos"`
 	BlockId  string `json:"block_id"`
 	Sold     bool   `json:"sold"`
-	Type 	 string `json:"type"`
+	Type     string `json:"type"`
 }
 
 type ReqBuyBlock struct {
 	PlayerId string `json:"player_id"`
 	GameId   string `json:"game_id"`
 	BlockId  string `json:"block_id"`
-	Price 	 int 	`json:"price"`
-	Colour 	 string	`json:"colour"`
-	CardNo 	 string `json:"card_no"`
-
+	Price    int    `json:"price"`
+	Colour   string `json:"colour"`
+	CardNo   string `json:"card_no"`
 }
 
 type RespBuyBlock struct {
@@ -58,5 +57,37 @@ type RespBuyBlock struct {
 	GameId   string `json:"game_id"`
 	BlockId  string `json:"block_id"`
 	Buy      bool   `json:"buy"`
-	Cash     int 	`json:"cash"`
+	Cash     int    `json:"cash"`
+}
+
+type ReqActionCard struct {
+	PlayerId string `json:"player_id"`
+	GameId   string `json:"game_id"`
+	BlockId  string `json:"block_id"`
+	CardId   string `json:"card_id"`
+	Price    int    `json:"price"`
+	Cash     int    `json:"cash"`
+	Pos      int    `json:"position"`
+	Type     string `json:"type"`
+}
+
+type RespActionCard struct {
+	PlayerId string `json:"player_id"`
+	GameId   string `json:"game_id"`
+	Cash     int    `json:"cash"`
+	Pos      int    `json:"position"`
+}
+
+type Jail struct {
+	InfoId string `json:"info_id"`
+	Info   string `json:"info"`
+}
+
+type RespJail struct {
+	PlayerId   string `json:"player_id"`
+	GameId     string `json:"game_id"`
+	GetOutCard bool   `json:"get_out_card"`
+	NewPos     int    `json:"new_pos"`
+	Jail       []Jail `json:"jail"`
+	InJail     bool   `json:"In_jail"`
 }

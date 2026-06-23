@@ -16,5 +16,9 @@ type DbOperations interface {
 	GetCardAction(cardNo string) (action string, err error)
 	GetPlayerCash(playerId string) (cash int, err error)
 	UpdatePlayerCash(playerId string, cash int) (err error)
+	GetPosByBlockName(blockName string) (pos int, err error)
+	GetBlockInfoByBlockType(blockType string) (jailInfo []models.Jail, err error)
+	GetCardOwnership(blockId, gameId string) (playerId string, err error)
+	UpdateGetOutOfJailCard(playerId, gameId string) (err error)
 
 }

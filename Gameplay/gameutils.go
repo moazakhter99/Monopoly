@@ -20,3 +20,11 @@ func updatePos(diceVal, currPos int) (newPos int) {
 
 	return
 }
+
+func ownershipConfirm(owenerId, playerId string) (bool) {
+	if owenerId == playerId {
+		return true
+	} else {
+		return  false
+	}
+}

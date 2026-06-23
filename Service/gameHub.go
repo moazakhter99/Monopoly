@@ -64,6 +64,7 @@ func (h *GameHub) ProcessEvent(message any) {
 
 	case models.ACTIONCARD:
 		
+		respByte = gameplay.ActionCard(wsMsg.Payload, *h.db, h.ReadMsg)
 
 	case models.RENT:
 
