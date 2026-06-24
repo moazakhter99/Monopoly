@@ -335,3 +335,64 @@ func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- model
 
 	return
 }
+
+func Jail(request json.RawMessage, db db.DbOperations) (response json.RawMessage) {
+	logger.ZapLogger.Infoln("Enter Jail")
+	var req models.ReqJail
+	var updatedCash int
+	var inJail bool
+
+	err := json.Unmarshal(request, &req)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.JAIL, "JSON Error", err)
+		return
+	}
+
+	switch req.JailId {
+
+	case "Jail0":
+		updatedCash = req.Cash - 500
+		err = db.UpdatePlayerCash(req.PlayerId, updatedCash)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
+			return
+		}
+
+		inJail = false
+
+	case "Jail1":
+		err = db.DeleteGetOutOfJailCard(req.PlayerId, req.GameId)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
+			return
+		}
+		inJail = false
+		updatedCash = req.Cash
+
+	case "Jail2":
+		err = db.UpdatePlayerStatus(req.PlayerId, "3")
+		if err != nil {
+			logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
+			return
+		}
+		inJail = true
+		updatedCash = req.Cash
+
+	}
+	
+	resp := models.RespJail{
+		PlayerId: req.PlayerId,
+		GameId: req.GameId,
+		Cash: updatedCash,
+		InJail: inJail,
+	}
+
+	response, err = json.Marshal(resp)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.JAIL, "JSON Error", err)
+		return
+	}
+
+	logger.ZapLogger.Infoln("Exit Jail")
+	return
+}

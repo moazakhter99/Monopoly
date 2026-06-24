@@ -90,4 +90,14 @@ type RespJail struct {
 	NewPos     int    `json:"new_pos"`
 	Jail       []Jail `json:"jail"`
 	InJail     bool   `json:"In_jail"`
+	Cash	   int	  `json:"cash"`
+}
+
+type ReqJail struct {
+	PlayerId	string	`json:"player_id"`
+	GameId		string	`json:"game_id"`
+	// InJail		bool	`json:"In_jail"`
+	JailId		string	`json:"jail_id"`
+	Cash		int		`json:"cash"`
+	
 }

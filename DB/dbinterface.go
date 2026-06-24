@@ -20,5 +20,7 @@ type DbOperations interface {
 	GetBlockInfoByBlockType(blockType string) (jailInfo []models.Jail, err error)
 	GetCardOwnership(blockId, gameId string) (playerId string, err error)
 	UpdateGetOutOfJailCard(playerId, gameId string) (err error)
+	DeleteGetOutOfJailCard(playerId, GameId string) (err error)
+	UpdatePlayerStatus(playerId, count string) (err error)
 
 }

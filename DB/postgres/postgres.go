@@ -12,6 +12,16 @@ type Postgres struct {
 	DB *sql.DB
 }
 
+// DeleteGetOutOfJailCard implements [db.DbOperations].
+func (p *Postgres) DeleteGetOutOfJailCard(playerId string, GameId string) (err error) {
+	panic("unimplemented")
+}
+
+// UpdatePlayerStatus implements [db.DbOperations].
+func (p *Postgres) UpdatePlayerStatus(playerId string, count string) (err error) {
+	panic("unimplemented")
+}
+
 // GetCardOwnership implements [db.DbOperations].
 func (p *Postgres) GetCardOwnership(blockId string, gameId string) (playerId string, err error) {
 	panic("unimplemented")

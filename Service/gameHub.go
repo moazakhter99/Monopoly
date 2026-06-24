@@ -62,13 +62,17 @@ func (h *GameHub) ProcessEvent(message any) {
 
 		respByte = gameplay.BuyBlock(wsMsg.Payload, *h.db)
 
+	case models.RENT:
+
+	case models.SELL:
+	
 	case models.ACTIONCARD:
 		
 		respByte = gameplay.ActionCard(wsMsg.Payload, *h.db, h.ReadMsg)
 
-	case models.RENT:
+	case models.JAIL:
 
-	case models.SELL:
+		respByte = gameplay.Jail(wsMsg.Payload, *h.db)
 	
 	}
 

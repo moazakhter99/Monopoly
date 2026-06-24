@@ -413,3 +413,22 @@ func (l *SqlLite) UpdateGetOutOfJailCard(playerId, gameId string) (err error) {
 
 	return
 }
+
+func (l *SqlLite) DeleteGetOutOfJailCard(playerId, GameId string) (err error) {
+
+	return
+}
+
+func (l *SqlLite) UpdatePlayerStatus(playerId, count string) (err error) {
+	logger.ZapLogger.Infoln("Enter Update Player Status")
+
+	status := models.BLOCKED + "_" + count
+	query := `UPDATE player SET status = ? WHERE player_id = ?`
+
+	_, err = l.DB.Exec(query, status, playerId)
+	if err != nil {
+		return
+	}
+
+	return
+}
