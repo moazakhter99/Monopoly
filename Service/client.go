@@ -2,7 +2,6 @@ package service
 
 import (
 	models "Monopoly/Models"
-	// service "Monopoly/Service"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -12,23 +11,25 @@ import (
 
 
 type Client struct {
+	PlayerId string
+	GameId	 string
 	logger *zap.SugaredLogger
 	Conn *websocket.Conn
 	ReadMsg chan models.WSMessage
 	WriteMsg chan models.WSMessage
 	ErrMsg chan string
-	PlayerId string
 	gameHub *GameHub
 	
 }
 
-func CreateNewClient(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger, hub *GameHub) *Client {
+func CreateNewClient(playerId, gameId string, conn *websocket.Conn, logger *zap.SugaredLogger, hub *GameHub) *Client {
 	return &Client{
+		PlayerId: playerId,
+		GameId: gameId,
 		logger: logger,
 		ReadMsg: make(chan models.WSMessage),
 		WriteMsg: make(chan models.WSMessage),
 		ErrMsg: make(chan string),
-		PlayerId: playerId,
 		Conn: conn,
 		gameHub: hub,
 	}
@@ -52,6 +53,12 @@ func (c *Client) ReadMessage() {
 			}
 			break
 		}
+
+		clientDetail := models.Client{
+			PlayerId: c.PlayerId,
+			GameId: c.GameId,
+		}
+		message.Client = &clientDetail		
 
 		c.gameHub.ReadMsg <- message
 

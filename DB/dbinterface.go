@@ -22,5 +22,7 @@ type DbOperations interface {
 	UpdateGetOutOfJailCard(playerId, gameId string) (err error)
 	DeleteGetOutOfJailCard(playerId, GameId string) (err error)
 	UpdatePlayerStatus(playerId, count string) (err error)
+	GetNextPlayer(gameId string, seq int) (playerId string, err error)
+	GetPlayerSeqAndCount(playerId string) (seq, count int, err error)
 
 }

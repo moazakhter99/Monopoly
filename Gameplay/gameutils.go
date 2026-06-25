@@ -28,3 +28,11 @@ func ownershipConfirm(owenerId, playerId string) (bool) {
 		return  false
 	}
 }
+
+func nextSeq(currSeq, count int) (nextSeq int) {
+	nextSeq = currSeq + 1
+	if nextSeq == count {
+		nextSeq = 0
+	}
+	return
+}

@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-func RollDice(request json.RawMessage, readCh chan<- models.WSMessage) (response json.RawMessage) {
+func RollDice(request json.RawMessage, client *models.Client, readCh chan<- models.WSMessage) (response json.RawMessage) {
 	logger.ZapLogger.Infoln("Roll Dice")
 	var req models.Request
 
@@ -17,13 +17,10 @@ func RollDice(request json.RawMessage, readCh chan<- models.WSMessage) (response
 		logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
 		return
 	}
-	playerId := req.PlayerId
 
 	diceVal := diceRoll()
 
 	resp := models.RespDiceRoll{
-		PlayerId: playerId,
-		GameId:   req.GameId,
 		DiceVal:  diceVal,
 	}
 
@@ -35,8 +32,6 @@ func RollDice(request json.RawMessage, readCh chan<- models.WSMessage) (response
 
 	go func() {
 		newPosReq := models.ReqMovePos{
-			PlayerId: req.PlayerId,
-			GameId:   req.GameId,
 			UpdateBy: diceVal,
 		}
 
@@ -48,6 +43,7 @@ func RollDice(request json.RawMessage, readCh chan<- models.WSMessage) (response
 
 		movePos := models.WSMessage{
 			Type:    models.MOVEPOS,
+			Client:  client,
 			Payload: newPosPayload,
 		}
 
@@ -58,7 +54,7 @@ func RollDice(request json.RawMessage, readCh chan<- models.WSMessage) (response
 	return
 }
 
-func MovePos(request json.RawMessage, db db.DbOperations) (response json.RawMessage) {
+func MovePos(request json.RawMessage, client *models.Client, db db.DbOperations) (response json.RawMessage) {
 	logger.ZapLogger.Info("Move Position")
 	var req models.ReqMovePos
 
@@ -67,8 +63,10 @@ func MovePos(request json.RawMessage, db db.DbOperations) (response json.RawMess
 		logger.ZapLogger.Errorw(models.MOVEPOS, "JSON Error", err)
 		return
 	}
+	playerId := client.PlayerId
+	gameId := client.GameId
 
-	player, err := db.GetPlayerInfoById(req.PlayerId)
+	player, err := db.GetPlayerInfoById(playerId)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
 		return
@@ -76,21 +74,22 @@ func MovePos(request json.RawMessage, db db.DbOperations) (response json.RawMess
 	logger.ZapLogger.Infow(models.MOVEPOS, "Current Position", player.Pos)
 
 	newPos := updatePos(req.UpdateBy, player.Pos)
-	err = db.UpdatePlayerPos(req.PlayerId, newPos)
+	err = db.UpdatePlayerPos(playerId, newPos)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
 	}
 
-	block, err := db.GetBlockState(newPos, req.GameId)
+	block, err := db.GetBlockState(newPos, gameId)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
 		return
 	}
-	logger.ZapLogger.Infow(models.MOVEPOS, "Block State", block.State, "New Position", newPos, "Block Id", block.BlockId)
+	logger.ZapLogger.Infow(models.MOVEPOS, 
+		"Block State", block.State, 
+		"New Position", newPos, 
+		"Block Id", block.BlockId)
 
 	resp := models.RespMovePos{
-		PlayerId: req.PlayerId,
-		GameId:   req.GameId,
 		BlockId:  block.BlockId,
 		NewPos:   newPos,
 		Sold:     block.State,
@@ -106,7 +105,7 @@ func MovePos(request json.RawMessage, db db.DbOperations) (response json.RawMess
 	return
 }
 
-func BuyBlock(request json.RawMessage, db db.DbOperations) (response json.RawMessage) {
+func BuyBlock(request json.RawMessage, client *models.Client, db db.DbOperations, readCh chan<- models.WSMessage) (response json.RawMessage) {
 	logger.ZapLogger.Infoln("Buy Block")
 	var req models.ReqBuyBlock
 	var updatedCash int
@@ -117,14 +116,16 @@ func BuyBlock(request json.RawMessage, db db.DbOperations) (response json.RawMes
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "JSON Error", err)
 		return
 	}
+	playerId := client.PlayerId
+	gameId := client.GameId
 
-	cash, err := db.GetPlayerCash(req.PlayerId)
+	cash, err := db.GetPlayerCash(playerId)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
 	}
 
 	if cash < req.Price {
-		logger.ZapLogger.Infow("Player Low on Cash", "Player Id", req.PlayerId, "Cash", cash)
+		logger.ZapLogger.Infow("Player Low on Cash", "Player Id", playerId, "Cash", cash)
 		buy = false
 
 	} else {
@@ -133,21 +134,43 @@ func BuyBlock(request json.RawMessage, db db.DbOperations) (response json.RawMes
 
 	}
 
-	err = db.UpdatePlayerCard(req.PlayerId, req.GameId, req.BlockId)
+	err = db.UpdatePlayerCard(playerId, gameId, req.BlockId)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
 	}
 
-	logger.ZapLogger.Infow(models.BUYBLOCK, "Game Id", req.GameId, "Player Id", req.PlayerId, "Block Id", req.BlockId)
+	logger.ZapLogger.Infow(models.BUYBLOCK, "Game Id", gameId, "Player Id", playerId, "Block Id", req.BlockId)
+
+	go func() {
+
+		changePlayerReq := models.Request{
+
+		}
+
+		payload, err := json.Marshal(changePlayerReq)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.CHANGEPLAYER, "JSON Error", err)
+			return
+		}
+
+		changePlayer := models.WSMessage{
+			Type: models.CHANGEPLAYER,
+			Client: client,
+			Payload: payload,
+		}
+
+		readCh <- changePlayer
+
+	}()
+
 	resp := models.RespBuyBlock{
-		PlayerId: req.PlayerId,
-		GameId:   req.GameId,
 		BlockId:  req.BlockId,
 		Buy:      buy,
 		Cash:     updatedCash,
+		ChangePlayer: true,
 	}
 
-	err = db.UpdatePlayerCash(req.PlayerId, updatedCash)
+	err = db.UpdatePlayerCash(playerId, updatedCash)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
 	}
@@ -161,7 +184,7 @@ func BuyBlock(request json.RawMessage, db db.DbOperations) (response json.RawMes
 	return
 }
 
-func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- models.WSMessage) (response json.RawMessage) {
+func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperations, readCh chan<- models.WSMessage) (response json.RawMessage) {
 	logger.ZapLogger.Infoln("Enter Action Block")
 	var req models.ReqActionCard
 
@@ -170,10 +193,10 @@ func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- model
 		logger.ZapLogger.Errorw(models.ACTIONCARD, "JSON Error", err)
 		return
 	}
+	playerId := client.PlayerId
+	gameId := client.GameId
 
 	resp := models.RespActionCard{
-		PlayerId: req.PlayerId,
-		GameId:   req.GameId,
 	}
 
 	switch req.Type {
@@ -219,7 +242,7 @@ func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- model
 			return
 
 		case models.GETOUTOFJAIL:
-			err = db.UpdateGetOutOfJailCard(req.PlayerId, req.GameId)
+			err = db.UpdateGetOutOfJailCard(playerId, gameId)
 			if err != nil {
 				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 				return
@@ -248,17 +271,15 @@ func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- model
 				return
 			}
 
-			ownerId, err := db.GetCardOwnership(req.BlockId, req.GameId)
+			ownerId, err := db.GetCardOwnership(req.BlockId, gameId)
 			if err != nil {
 				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 				return
 			}
 
 			reqjail := models.RespJail{
-				PlayerId:   req.PlayerId,
-				GameId:     req.GameId,
 				Jail:       jailInfo,
-				GetOutCard: ownershipConfirm(ownerId, req.PlayerId),
+				GetOutCard: ownershipConfirm(ownerId, playerId),
 				InJail:     true,
 			}
 
@@ -270,6 +291,7 @@ func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- model
 
 			jailWsMsg := models.WSMessage{
 				Type:    models.JAIL,
+				Client:  client,
 				Payload: jailReq,
 			}
 
@@ -295,8 +317,6 @@ func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- model
 			}
 
 			reqjail := models.RespJail{
-				PlayerId: req.PlayerId,
-				GameId:   req.GameId,
 				Jail:     jailInfo,
 				NewPos:   jailPos,
 				// Get this from DB
@@ -312,6 +332,7 @@ func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- model
 
 			jailWsMsg := models.WSMessage{
 				Type:    models.JAIL,
+				Client:  client,
 				Payload: jailReq,
 			}
 
@@ -336,7 +357,7 @@ func ActionCard(request json.RawMessage, db db.DbOperations, readCh chan<- model
 	return
 }
 
-func Jail(request json.RawMessage, db db.DbOperations) (response json.RawMessage) {
+func Jail(request json.RawMessage, client *models.Client, db db.DbOperations) (response json.RawMessage) {
 	logger.ZapLogger.Infoln("Enter Jail")
 	var req models.ReqJail
 	var updatedCash int
@@ -347,12 +368,14 @@ func Jail(request json.RawMessage, db db.DbOperations) (response json.RawMessage
 		logger.ZapLogger.Errorw(models.JAIL, "JSON Error", err)
 		return
 	}
+	playerId := client.PlayerId
+	gameId := client.GameId
 
 	switch req.JailId {
 
 	case "Jail0":
 		updatedCash = req.Cash - 500
-		err = db.UpdatePlayerCash(req.PlayerId, updatedCash)
+		err = db.UpdatePlayerCash(playerId, updatedCash)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
 			return
@@ -361,7 +384,7 @@ func Jail(request json.RawMessage, db db.DbOperations) (response json.RawMessage
 		inJail = false
 
 	case "Jail1":
-		err = db.DeleteGetOutOfJailCard(req.PlayerId, req.GameId)
+		err = db.DeleteGetOutOfJailCard(playerId, gameId)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
 			return
@@ -370,7 +393,7 @@ func Jail(request json.RawMessage, db db.DbOperations) (response json.RawMessage
 		updatedCash = req.Cash
 
 	case "Jail2":
-		err = db.UpdatePlayerStatus(req.PlayerId, "3")
+		err = db.UpdatePlayerStatus(playerId, "3")
 		if err != nil {
 			logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
 			return
@@ -381,8 +404,6 @@ func Jail(request json.RawMessage, db db.DbOperations) (response json.RawMessage
 	}
 	
 	resp := models.RespJail{
-		PlayerId: req.PlayerId,
-		GameId: req.GameId,
 		Cash: updatedCash,
 		InJail: inJail,
 	}
@@ -394,5 +415,49 @@ func Jail(request json.RawMessage, db db.DbOperations) (response json.RawMessage
 	}
 
 	logger.ZapLogger.Infoln("Exit Jail")
+	return
+}
+
+func ChangePlayer(request json.RawMessage, client *models.Client, db db.DbOperations) (targetMap map[string][]byte) {
+	logger.ZapLogger.Infoln("Enter Change Player")
+	var req models.Request
+	targetMap = make(map[string][]byte, 2)
+
+	err := json.Unmarshal(request, &req)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.JAIL, "JSON Error", err)
+		return
+	}
+	playerId := client.PlayerId
+	gameId := client.GameId
+
+	seq, count, err := db.GetPlayerSeqAndCount(playerId)
+
+	nextPlayerId, err := db.GetNextPlayer(gameId, nextSeq(seq, count))
+
+	nextPlayer := models.RespChangePlayer{
+		NextPlayer: nextPlayerId,
+		Playing: true,
+	}
+	nextResp, err := json.Marshal(nextPlayer)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYBLOCK, "JSON Error", err)
+		return
+	}
+	targetMap[nextPlayerId] = nextResp
+
+	currPlayer := models.RespChangePlayer{
+		NextPlayer: nextPlayerId,
+		Playing: false,
+	}
+	currResp, err := json.Marshal(currPlayer)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYBLOCK, "JSON Error", err)
+		return
+	}
+	targetMap[playerId] = currResp
+
+
+	logger.ZapLogger.Infoln("Exit Change Player")
 	return
 }

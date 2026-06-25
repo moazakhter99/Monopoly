@@ -43,7 +43,10 @@ func (h *GameHub) ProcessEvent(message any) {
 
 	var respMsg models.WSMessage
 	var respByte []byte
+	var respByteMap map[string][]byte
 	all := true
+	specific := false
+	diff := false
 
 	wsMsg := message.(models.WSMessage)
 	h.logger.Infow("ReadMsg", "Type", wsMsg.Type, "Message", string(wsMsg.Payload))
@@ -52,15 +55,15 @@ func (h *GameHub) ProcessEvent(message any) {
 
 	case models.ROLLDICE:
 
-		respByte = gameplay.RollDice(wsMsg.Payload, h.ReadMsg)
+		respByte = gameplay.RollDice(wsMsg.Payload, wsMsg.Client, h.ReadMsg)
 
 	case models.MOVEPOS:
 
-		respByte = gameplay.MovePos(wsMsg.Payload, *h.db)
+		respByte = gameplay.MovePos(wsMsg.Payload, wsMsg.Client, *h.db)
 
 	case models.BUYBLOCK:
 
-		respByte = gameplay.BuyBlock(wsMsg.Payload, *h.db)
+		respByte = gameplay.BuyBlock(wsMsg.Payload, wsMsg.Client, *h.db, h.ReadMsg)
 
 	case models.RENT:
 
@@ -68,24 +71,42 @@ func (h *GameHub) ProcessEvent(message any) {
 	
 	case models.ACTIONCARD:
 		
-		respByte = gameplay.ActionCard(wsMsg.Payload, *h.db, h.ReadMsg)
+		respByte = gameplay.ActionCard(wsMsg.Payload, wsMsg.Client, *h.db, h.ReadMsg)
 
 	case models.JAIL:
 
-		respByte = gameplay.Jail(wsMsg.Payload, *h.db)
+		respByte = gameplay.Jail(wsMsg.Payload, wsMsg.Client, *h.db)
+
+	case models.CHANGEPLAYER:
+
+		respByteMap = gameplay.ChangePlayer(wsMsg.Payload, wsMsg.Client, *h.db)
+		diff = true
+		all = false
 	
 	}
 
-	respMsg.Payload = respByte
 	respMsg.Type = wsMsg.Type
 
 	if all {
+		respMsg.Payload = respByte
 		for _, cl := range h.ClientMap {
 			cl.WriteMsg <- respMsg
 
 		}
 	}
 
+	if specific {
+
+	}
+
+	if diff {
+		for id, respMsgByte := range respByteMap {
+			respMsg.Payload = respMsgByte
+			cl := h.ClientMap[id]
+			cl.WriteMsg <- respMsg
+		}
+
+	}
 
 	logger.ZapLogger.Infoln("Exit ProcessEvent")
 }

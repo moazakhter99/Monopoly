@@ -194,7 +194,7 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 
 	var state bool
 	var err error
-	query := `SELECT block_id, block_tye from game_board where position = ?`
+	query := `SELECT block_id, block_type from game_board where position = ?`
 
 	row := l.DB.QueryRow(query, position)
 
@@ -205,6 +205,8 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 
 	err = row.Scan(&block_id, &block_type)
 	if err != nil {
+		logger.ZapLogger.Errorln(err)
+		er = err
 		return
 	}
 
@@ -218,8 +220,10 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 
 	err = row2.Scan(&player_id)
 	if err == sql.ErrNoRows {
+		logger.ZapLogger.Errorln(err)
 		state = false
 	} else if err != nil {
+		logger.ZapLogger.Errorln(err)
 		er = err
 		return nil, er
 	}
@@ -429,6 +433,48 @@ func (l *SqlLite) UpdatePlayerStatus(playerId, count string) (err error) {
 	if err != nil {
 		return
 	}
+
+	return
+}
+
+func (l *SqlLite) GetNextPlayer(gameId string, seq int) (playerId string, err error) {
+	logger.ZapLogger.Infoln("Enter Get Next Player")
+
+	query := `SELECT player_id FROM player WHERE game_id = ? AND seq = ?`
+
+	row := l.DB.QueryRow(query, gameId, seq)
+
+	var player_id sql.NullString
+
+	err = row.Scan(&player_id)
+	if err != nil {
+		return
+	}
+
+	playerId = player_id.String
+
+	return
+}
+
+func (l *SqlLite) GetPlayerSeqAndCount(playerId string) (seq, count int, err error) {
+	logger.ZapLogger.Infoln("Enter Get Player Seq and Count")
+
+	query := `SELECT p.seq, g.player_count FROM game as g JOIN player as p ON g.game_id = p.game_id WHERE p.payer_id = ?`
+
+	row := l.DB.QueryRow(query, playerId)
+
+	var (
+		player_seq sql.NullInt16
+		game_count sql.NullInt16
+	)
+
+	err = row.Scan(&player_seq, &game_count)
+	if err != nil {
+		return
+	}
+
+	seq = int(player_seq.Int16)
+	count = int(game_count.Int16)
 
 	return
 }
