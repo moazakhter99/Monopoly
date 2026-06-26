@@ -356,7 +356,7 @@ func (l *SqlLite) GetPosByBlockName(blockName string) (pos int, err error) {
 }
 
 func (l *SqlLite) GetBlockInfoByBlockType(blockType string) (jailInfo []models.Jail, err error) {
-	logger.ZapLogger.Infow("Enter Get Block Info by Block Type")
+	logger.ZapLogger.Infoln("Enter Get Block Info by Block Type")
 
 	query := `SELECT Info_id, block_info FROM block_info WHERE block_type = ?`
 
@@ -386,6 +386,7 @@ func (l *SqlLite) GetBlockInfoByBlockType(blockType string) (jailInfo []models.J
 
 	}
 
+	logger.ZapLogger.Infoln("Exit Get Block Info by Block Type")
 	return
 }
 

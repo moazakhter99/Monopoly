@@ -72,6 +72,9 @@ func main() {
 	router.HandleFunc("/ws", wsHandler.WSHandler)
 	go run(gameHub)
 
+	getInfoRouter := router.PathPrefix("/info").Subrouter().Methods("GET")
+	routes.GetInfoRouter(getInfoRouter.Subrouter(), MonopolyDB)
+
 	http.ListenAndServe(":"+port, router)
 
 }

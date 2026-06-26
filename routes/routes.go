@@ -27,7 +27,10 @@ var InitGameSubRouter = func (router *mux.Router, db db.DbOperations, logger *za
 
 }
 
-// var GameSubRouter = func (router *mux.Router, proc service.RequestProcessor) {
+var GetInfoRouter = func (router *mux.Router, db db.DbOperations) {
 
+	createJailReq := service.CreateJailReq(db)
+	createJailReqHandler := handler.NewGameController(createJailReq)
+	router.HandleFunc("/jail", createJailReqHandler.GameHandler)
 
-// }
+}

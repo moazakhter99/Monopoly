@@ -13,11 +13,6 @@ type WsError struct {
 	WsError int
 }
 
-type Client struct {
-	PlayerId string `json:"player_id"`
-	GameId   string `json:"game_id"`
-}
-
 type Request struct {
 }
 
@@ -65,6 +60,7 @@ type ReqActionCard struct {
 type RespActionCard struct {
 	Cash     int    `json:"cash"`
 	Pos      int    `json:"position"`
+	InJail	 bool	`json:"in_jail"`
 }
 
 type Jail struct {
@@ -81,7 +77,7 @@ type RespJail struct {
 }
 
 type ReqJail struct {
-	// InJail		bool	`json:"In_jail"`
+	InJail		bool	`json:"In_jail"`
 	JailId		string	`json:"jail_id"`
 	Cash		int		`json:"cash"`
 	

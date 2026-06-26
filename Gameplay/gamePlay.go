@@ -197,6 +197,7 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 	gameId := client.GameId
 
 	resp := models.RespActionCard{
+		InJail: false,
 	}
 
 	switch req.Type {
@@ -263,82 +264,20 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 
 	case models.JAIL:
 		resp.Pos = req.Pos
-
-		go func() {
-			jailInfo, err := db.GetBlockInfoByBlockType(models.JAIL)
-			if err != nil {
-				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
-				return
-			}
-
-			ownerId, err := db.GetCardOwnership(req.BlockId, gameId)
-			if err != nil {
-				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
-				return
-			}
-
-			reqjail := models.RespJail{
-				Jail:       jailInfo,
-				GetOutCard: ownershipConfirm(ownerId, playerId),
-				InJail:     true,
-			}
-
-			jailReq, err := json.Marshal(reqjail)
-			if err != nil {
-				logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
-				return
-			}
-
-			jailWsMsg := models.WSMessage{
-				Type:    models.JAIL,
-				Client:  client,
-				Payload: jailReq,
-			}
-
-			readCh <- jailWsMsg
-
-		}()
+		resp.InJail = true
 
 	case models.FREEPARKING:
 
 	case models.GOTOJAIL:
 
-		go func() {
-			jailInfo, err := db.GetBlockInfoByBlockType(models.JAIL)
-			if err != nil {
-				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
-				return
-			}
+		jailPos, err := db.GetPosByBlockName("Jail")
+		if err != nil {
+			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+			return
+		}
 
-			jailPos, err := db.GetPosByBlockName("Jail")
-			if err != nil {
-				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
-				return
-			}
-
-			reqjail := models.RespJail{
-				Jail:     jailInfo,
-				NewPos:   jailPos,
-				// Get this from DB
-				GetOutCard: false,
-				InJail:     true,
-			}
-
-			jailReq, err := json.Marshal(reqjail)
-			if err != nil {
-				logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
-				return
-			}
-
-			jailWsMsg := models.WSMessage{
-				Type:    models.JAIL,
-				Client:  client,
-				Payload: jailReq,
-			}
-
-			readCh <- jailWsMsg
-
-		}()
+		resp.Pos = jailPos
+		resp.InJail = true
 
 	case models.PROPERTYTAX:
 		resp.Cash = req.Cash - req.Price
@@ -398,7 +337,7 @@ func Jail(request json.RawMessage, client *models.Client, db db.DbOperations) (r
 			logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
 			return
 		}
-		inJail = true
+		inJail = req.InJail
 		updatedCash = req.Cash
 
 	}
