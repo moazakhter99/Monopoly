@@ -30,7 +30,15 @@ var InitGameSubRouter = func (router *mux.Router, db db.DbOperations, logger *za
 var GetInfoRouter = func (router *mux.Router, db db.DbOperations) {
 
 	createJailReq := service.CreateJailReq(db)
-	createJailReqHandler := handler.NewGameController(createJailReq)
-	router.HandleFunc("/jail", createJailReqHandler.GameHandler)
+	jailReqHandler := handler.NewGameController(createJailReq)
+	router.HandleFunc("/jail", jailReqHandler.GameHandler)
+
+	createCommunityChestReq := service.CreateCommunityChestReq(db)
+	communityChestHandler := handler.NewGameController(createCommunityChestReq)
+	router.HandleFunc("/communityChest", communityChestHandler.GameHandler)
+
+	createChanceReq := service.CreateChanceReq(db)
+	chanceHandler := handler.NewGameController(createChanceReq)
+	router.HandleFunc("/chance", chanceHandler.GameHandler)
 
 }

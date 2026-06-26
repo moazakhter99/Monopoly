@@ -40,11 +40,12 @@ func (p *JailReq) ProcessMsg(body any) (resp []byte, err error) {
 	logger.ZapLogger.Infoln("Enter Jail Processor")
 
 	var infoList []*models.BlockInfo
-	req := body.(models.ReqJailInfo)
+	req := body.(models.ReqBlockInfo)
 
 	jailInfo, err := p.db.GetBlockInfoByBlockType(models.JAIL)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
+		return
 	}
 
 	for _, info := range jailInfo {
@@ -56,7 +57,7 @@ func (p *JailReq) ProcessMsg(body any) (resp []byte, err error) {
 		infoList = append(infoList, &blockInfo)
 	}
 
-	jailResp := models.RespJailInfo{
+	jailResp := models.RespBlockInfo{
 		MsgId: req.MsgId,
 		BlockType: models.JAIL,
 		BlockInfo: infoList,
