@@ -132,7 +132,7 @@ func (l *SqlLite) GetGameFromMatchId(matchId string) (gameId string, err error) 
 
 	err = row.Scan(&game_id)
 	if err != nil {
-		logger.ZapLogger.Errorw("DB Select", "Error", err)
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 	gameId = game_id.String
@@ -159,6 +159,7 @@ func (l *SqlLite) GetPlayerInfoById(playerId string) (player *models.Player, err
 
 	err = row.Scan(&player_id, &player_name, &position, &game_id, &cash, &seq)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -183,6 +184,7 @@ func (l *SqlLite) UpdatePlayerPos(playerId string, position int) (err error) {
 
 	_, err = l.DB.Exec(query, position, playerId)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -203,7 +205,7 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 
 	err = row.Scan(&block_id, &block_type)
 	if err != nil {
-		logger.ZapLogger.Errorln(err)
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -213,6 +215,10 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 	}
 
 	playerId, err := l.GetBlockOwner(block.BlockId, gameId)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
 
 	if playerId != "" {
 		block.State = models.SOLD
@@ -234,6 +240,7 @@ func (l *SqlLite) GetBlockOwner(blockID, gameID string) (playerId string, err er
 	if err == sql.ErrNoRows {
 		return "", err
 	} else if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return "", nil
 	}
 
@@ -261,6 +268,7 @@ func (l *SqlLite) GetBlockInfoById(blockId string) (block *models.Block, err err
 
 	err = row.Scan(&block_id, &block_type, &block_name, &block_colour, &position, &block_price, &base_rent)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -285,6 +293,7 @@ func (l *SqlLite) UpdatePlayerCard(playerId, gameId, blockId string) (err error)
 
 	_, err = l.DB.Exec(query, playerId, gameId, blockId)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -301,6 +310,7 @@ func (l *SqlLite) GetCardAction(cardNo string) (action string, err error) {
 	var card_action sql.NullString
 	err = row.Scan(&card_action)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -319,6 +329,7 @@ func (l *SqlLite) GetPlayerCash(playerId string) (cash int, err error) {
 	var player_cash sql.NullInt64
 	err = row.Scan(&player_cash)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -334,6 +345,7 @@ func (l *SqlLite) UpdatePlayerCash(playerId string, cash int) (err error) {
 
 	_, err = l.DB.Exec(query, playerId)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -350,6 +362,7 @@ func (l *SqlLite) GetPosByBlockName(blockName string) (pos int, err error) {
 	var position sql.NullInt16
 	err = row.Scan(&position)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -365,6 +378,7 @@ func (l *SqlLite) GetBlockInfoByBlockType(blockType string) (jailInfo []models.J
 
 	rows, err := l.DB.Query(query, blockType)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -377,6 +391,7 @@ func (l *SqlLite) GetBlockInfoByBlockType(blockType string) (jailInfo []models.J
 
 		err = rows.Scan(&info_id, &block_info)
 		if err != nil {
+			logger.ZapLogger.Errorw("SQL Err", "Error", err)
 			return
 		}
 
@@ -403,6 +418,10 @@ func (l *SqlLite) GetCardOwnership(blockId, gameId string) (playerId string, err
 	var player_id sql.NullString
 
 	err = row.Scan(&player_id)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
 
 	playerId = player_id.String
 
@@ -416,14 +435,25 @@ func (l *SqlLite) UpdateGetOutOfJailCard(playerId, gameId string) (err error) {
 
 	_, err = l.DB.Exec(query, playerId, gameId)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
 	return
 }
 
-func (l *SqlLite) DeleteGetOutOfJailCard(playerId, GameId string) (err error) {
+func (l *SqlLite) DeleteGetOutOfJailCard(playerId, gameId string) (err error) {
+	logger.ZapLogger.Infoln("Enter Delete Get Out of Jail")
 
+	query := `DELETE FROM game_player WHERE player_id = ? AND game_id = ? AND card_id = ?`
+
+	_, err = l.DB.Exec(query, playerId, gameId)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
+
+	logger.ZapLogger.Infoln("Exit Delete Get Out of Jail")
 	return
 }
 
@@ -435,6 +465,7 @@ func (l *SqlLite) UpdatePlayerStatus(playerId, count string) (err error) {
 
 	_, err = l.DB.Exec(query, status, playerId)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -452,6 +483,7 @@ func (l *SqlLite) GetNextPlayer(gameId string, seq int) (playerId string, err er
 
 	err = row.Scan(&player_id)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -474,6 +506,7 @@ func (l *SqlLite) GetPlayerSeqAndCount(playerId string) (seq, count int, err err
 
 	err = row.Scan(&player_seq, &game_count)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -494,6 +527,7 @@ func (l *SqlLite) GetCardOwnershipStatus(playerId, blockId string) (status strin
 
 	err = row.Scan(&player_status)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
@@ -516,10 +550,39 @@ func (l *SqlLite) GetCardOwnerCount(playerId, gameId string) (count int, err err
 	var card_count sql.NullInt16
 	err = row.Scan(&card_count)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 	
 	count = int(card_count.Int16)
 
+	return
+}
+
+
+func (l *SqlLite) GetPlayerStatusList(playerId, gameId string) (statusList []string, err error) {
+	logger.ZapLogger.Infoln("Enter Get Player Status List")
+
+	query := `SELECT status FROM game_player WHERE player_id = ? AND game_id = ?`
+
+	rows, err := l.DB.Query(query, playerId, gameId)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
+
+	for rows.Next() {
+		var card_status sql.NullString
+
+		err = rows.Scan(&card_status)
+		if err != nil {
+			logger.ZapLogger.Errorw("SQL Err", "Error", err)
+			return
+		}
+		statusList = append(statusList, card_status.String)
+
+	}
+
+	logger.ZapLogger.Infoln("Exit Get Player Status List")
 	return
 }

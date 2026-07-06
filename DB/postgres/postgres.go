@@ -12,6 +12,11 @@ type Postgres struct {
 	DB *sql.DB
 }
 
+// GetPlayerStatusList implements [db.DbOperations].
+func (p *Postgres) GetPlayerStatusList(playerId string, gameId string) (statusList []string, err error) {
+	panic("unimplemented")
+}
+
 // GetCardOwnerCount implements [db.DbOperations].
 func (p *Postgres) GetCardOwnerCount(playerId string, gameId string) (count int, err error) {
 	panic("unimplemented")

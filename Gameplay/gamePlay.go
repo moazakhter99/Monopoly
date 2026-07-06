@@ -242,7 +242,14 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 			}
 
 		case models.HOUSEHOTELFINE:
-			return
+			statusList, err := db.GetPlayerStatusList(playerId, gameId)
+			if err != nil {
+				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+				return
+			}
+
+			fine := houseHotelFine(statusList)
+			resp.Cash = req.Cash - fine
 
 		case models.GETOUTOFJAIL:
 			err = db.UpdateGetOutOfJailCard(playerId, gameId)
@@ -366,15 +373,23 @@ func ChangePlayer(request json.RawMessage, client *models.Client, db db.DbOperat
 
 	err := json.Unmarshal(request, &req)
 	if err != nil {
-		logger.ZapLogger.Errorw(models.JAIL, "JSON Error", err)
+		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "JSON Error", err)
 		return
 	}
 	playerId := client.PlayerId
 	gameId := client.GameId
 
 	seq, count, err := db.GetPlayerSeqAndCount(playerId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "DB Error", err)
+		return
+	}
 
 	nextPlayerId, err := db.GetNextPlayer(gameId, nextSeq(seq, count))
+	if err != nil {
+		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "DB Error", err)
+		return
+	}
 
 	nextPlayer := models.RespChangePlayer{
 		NextPlayer: nextPlayerId,
@@ -382,7 +397,7 @@ func ChangePlayer(request json.RawMessage, client *models.Client, db db.DbOperat
 	}
 	nextResp, err := json.Marshal(nextPlayer)
 	if err != nil {
-		logger.ZapLogger.Errorw(models.BUYBLOCK, "JSON Error", err)
+		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "JSON Error", err)
 		return
 	}
 	targetMap[nextPlayerId] = nextResp
@@ -393,11 +408,10 @@ func ChangePlayer(request json.RawMessage, client *models.Client, db db.DbOperat
 	}
 	currResp, err := json.Marshal(currPlayer)
 	if err != nil {
-		logger.ZapLogger.Errorw(models.BUYBLOCK, "JSON Error", err)
+		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "JSON Error", err)
 		return
 	}
 	targetMap[playerId] = currResp
-
 
 	logger.ZapLogger.Infoln("Exit Change Player")
 	return

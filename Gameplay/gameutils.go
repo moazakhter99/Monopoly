@@ -38,6 +38,37 @@ func nextSeq(currSeq, count int) (nextSeq int) {
 	return
 }
 
+func houseHotelFine(statusList []string) (fine int) {
+	fine = 0
+
+	for _, status := range statusList {
+		
+		switch status {
+
+		case models.HOUSE_1:
+			fine += 400 * 1
+
+		case models.HOUSE_2:
+			fine += 400 * 2
+
+		case models.HOUSE_3:
+			fine += 400 * 3
+
+		case models.HOUSE_4:
+			fine += 400 * 4
+
+		case models.HOTEL:
+			fine += 1150
+
+		default:
+			fine += 0
+			
+		}
+	}
+
+	return
+}
+
 func utilityRentCalculation(baseRent, cardCount int) (rent int) {
 
 	if cardCount < 2 {

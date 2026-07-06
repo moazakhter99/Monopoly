@@ -27,5 +27,6 @@ type DbOperations interface {
 	GetBlockOwner(blockID, gameID string) (playerID string, err error)
 	GetCardOwnershipStatus(playerId, blockId string) (status string, err error)
 	GetCardOwnerCount(playerId, gameId string) (count int, err error)
+	GetPlayerStatusList(playerId, gameId string) (statusList []string, err error)
 
 }
