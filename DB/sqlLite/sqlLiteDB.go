@@ -190,10 +190,8 @@ func (l *SqlLite) UpdatePlayerPos(playerId string, position int) (err error) {
 	return
 }
 
-func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Block, er error) {
+func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Block, err error) {
 
-	var state bool
-	var err error
 	query := `SELECT block_id, block_type from game_board where position = ?`
 
 	row := l.DB.QueryRow(query, position)
@@ -206,37 +204,42 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 	err = row.Scan(&block_id, &block_type)
 	if err != nil {
 		logger.ZapLogger.Errorln(err)
-		er = err
 		return
 	}
 
-	blockId := block_id.String
-
-	query2 := `SELECT player_id FROM game_player WHERE game_id = ? and card_id = ?`
-
-	row2 := l.DB.QueryRow(query2, gameId, blockId)
-
-	var player_id sql.NullString
-
-	err = row2.Scan(&player_id)
-	if err == sql.ErrNoRows {
-		logger.ZapLogger.Errorln(err)
-		state = false
-	} else if err != nil {
-		logger.ZapLogger.Errorln(err)
-		er = err
-		return nil, er
-	}
-	// playerId := player_id.String
-	state = true
-
 	block = &models.Block{
-		BlockId: blockId,
+		BlockId: block_id.String,
 		Type:    block_type.String,
-		State:   state,
+	}
+
+	playerId, err := l.GetBlockOwner(block.BlockId, gameId)
+
+	if playerId != "" {
+		block.State = models.SOLD
+		block.OwnerId = playerId
 	}
 
 	return
+}
+
+func (l *SqlLite) GetBlockOwner(blockID, gameID string) (playerId string, err error) {
+
+	query := `SELECT player_id FROM game_player WHERE game_id = ? and card_id = ?`
+
+	row := l.DB.QueryRow(query, gameID, blockID)
+
+	var player_id sql.NullString
+
+	err = row.Scan(&player_id)
+	if err == sql.ErrNoRows {
+		return "", err
+	} else if err != nil {
+		return "", nil
+	}
+
+	playerId = player_id.String
+
+	return 
 }
 
 func (l *SqlLite) GetBlockInfoById(blockId string) (block *models.Block, err error) {
@@ -476,6 +479,47 @@ func (l *SqlLite) GetPlayerSeqAndCount(playerId string) (seq, count int, err err
 
 	seq = int(player_seq.Int16)
 	count = int(game_count.Int16)
+
+	return
+}
+
+func (l *SqlLite) GetCardOwnershipStatus(playerId, blockId string) (status string, err error) {
+	logger.ZapLogger.Infoln("Enter Get Card Ownership Status")
+
+	query := `SELECT status FROM game_palyer WHERE player_id = ? AND block_id = ?`
+
+	row := l.DB.QueryRow(query, playerId, blockId)
+
+	var player_status sql.NullString
+
+	err = row.Scan(&player_status)
+	if err != nil {
+		return
+	}
+
+	status = player_status.String
+
+	return
+}
+
+
+func (l *SqlLite) GetCardOwnerCount(playerId, gameId string) (count int, err error) {
+	logger.ZapLogger.Infoln("Enter Get Card Owner Count")
+
+	query := `SELECT count(*) 
+				FROM game_player AS gp 
+				JOIN game_board AS gb ON gp.card_id = gb.block_id 
+				WHERE gb.block_type = ? AND gp.player_id = ? AND game_id = ?;`
+
+	row := l.DB.QueryRow(query, models.UTILITY, playerId, gameId)
+
+	var card_count sql.NullInt16
+	err = row.Scan(&card_count)
+	if err != nil {
+		return
+	}
+	
+	count = int(card_count.Int16)
 
 	return
 }

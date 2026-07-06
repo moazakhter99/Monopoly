@@ -65,7 +65,17 @@ func (h *GameHub) ProcessEvent(message any) {
 
 		respByte = gameplay.BuyBlock(wsMsg.Payload, wsMsg.Client, *h.db, h.ReadMsg)
 
-	case models.RENT:
+	case models.CALCULATERENT:
+
+		respByteMap = gameplay.CalculateRent(wsMsg.Payload, wsMsg.Client, *h.db)
+		diff = true
+		all = false
+
+	case models.PAYRENT:
+
+		respByteMap = gameplay.PayRent(wsMsg.Payload, wsMsg.Client, *h.db)
+		diff = true
+		all = false
 
 	case models.SELL:
 	

@@ -24,5 +24,8 @@ type DbOperations interface {
 	UpdatePlayerStatus(playerId, count string) (err error)
 	GetNextPlayer(gameId string, seq int) (playerId string, err error)
 	GetPlayerSeqAndCount(playerId string) (seq, count int, err error)
+	GetBlockOwner(blockID, gameID string) (playerID string, err error)
+	GetCardOwnershipStatus(playerId, blockId string) (status string, err error)
+	GetCardOwnerCount(playerId, gameId string) (count int, err error)
 
 }

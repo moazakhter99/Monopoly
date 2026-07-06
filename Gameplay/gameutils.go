@@ -1,6 +1,7 @@
 package gameplay
 
 import (
+	models "Monopoly/Models"
 	"math/rand/v2"
 )
 
@@ -34,5 +35,51 @@ func nextSeq(currSeq, count int) (nextSeq int) {
 	if nextSeq == count {
 		nextSeq = 0
 	}
+	return
+}
+
+func utilityRentCalculation(baseRent, cardCount int) (rent int) {
+
+	if cardCount < 2 {
+		rent = baseRent
+
+	} else if cardCount < 4 {
+		rent = baseRent * 2
+
+	} else  {
+		rent = baseRent * 4
+
+	}
+
+	return
+} 
+
+func cityRentCalculation(baseRent int, status string) (rent int) {
+
+	switch status {
+
+	case models.BASE:
+		rent = baseRent
+
+	case models.COLOUR:
+		rent = baseRent * 2
+
+	case models.HOUSE_1:
+		rent = baseRent * 2
+
+	case models.HOUSE_2:
+		rent = baseRent * 15
+
+	case models.HOUSE_3:
+		rent = baseRent * 35
+
+	case models.HOUSE_4:
+		rent = baseRent * 45
+
+	case models.HOTEL:
+		rent = baseRent * 50
+
+	}
+
 	return
 }

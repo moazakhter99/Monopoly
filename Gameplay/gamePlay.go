@@ -6,6 +6,7 @@ import (
 	"Monopoly/logger"
 	"encoding/json"
 	"strconv"
+
 )
 
 func RollDice(request json.RawMessage, client *models.Client, readCh chan<- models.WSMessage) (response json.RawMessage) {
@@ -85,15 +86,16 @@ func MovePos(request json.RawMessage, client *models.Client, db db.DbOperations)
 		return
 	}
 	logger.ZapLogger.Infow(models.MOVEPOS, 
-		"Block State", block.State, 
+		"Block Sold", block.State, 
 		"New Position", newPos, 
 		"Block Id", block.BlockId)
 
 	resp := models.RespMovePos{
 		BlockId:  block.BlockId,
 		NewPos:   newPos,
-		Sold:     block.State,
+		State:    block.State,
 		Type:     block.Type,
+		OwnerId:  block.OwnerId,
 	}
 
 	response, err = json.Marshal(resp)
@@ -398,5 +400,145 @@ func ChangePlayer(request json.RawMessage, client *models.Client, db db.DbOperat
 
 
 	logger.ZapLogger.Infoln("Exit Change Player")
+	return
+}
+
+func CalculateRent(request json.RawMessage, client *models.Client, db db.DbOperations) (targetMap map[string][]byte) {
+	logger.ZapLogger.Infoln("Enter Calculate Rent")	
+	var req models.ReqCalculateRent
+	var rent int
+	targetMap = make(map[string][]byte, 2)
+
+	err := json.Unmarshal(request, &req)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.CALCULATERENT, "JSON Error", err)
+		return
+	}
+	playerId := client.PlayerId
+	gameId := client.GameId
+	baseRent := req.Price * 10 / 100
+
+	logger.ZapLogger.Infoln(models.CALCULATERENT, "Calculating Rent")
+
+	switch req.BlockType {
+
+	case models.UTILITY:
+
+		cardCount, err := db.GetCardOwnerCount(playerId, gameId)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.CALCULATERENT, "DB Error", err)
+			return
+		}
+		rent = utilityRentCalculation(baseRent, cardCount)
+
+	case models.CITY:
+
+		status, err := db.GetCardOwnershipStatus(playerId, req.BlockId)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.CALCULATERENT, "DB ERROR", err)
+			return
+		}
+		rent = cityRentCalculation(baseRent, status)
+
+	default:
+
+	}
+
+	playerResp := models.RespCalculateRent{
+		BlockId: req.BlockId,
+		BlockType: req.BlockType,
+		OwnerId: req.OwnerId,
+		Rent: rent,
+	}
+
+	playerResponse, err := json.Marshal(playerResp)
+	if err != nil {
+		logger.ZapLogger.Infow(models.CALCULATERENT, "Resp for", client.PlayerId, "JSON err", err)
+		return
+	}
+
+	targetMap[client.PlayerId] = playerResponse
+
+	ownerResp := models.RespCalculateRent{
+		BlockId: req.BlockId,
+		BlockType: req.BlockType,
+		RenterId: playerId,
+		Rent: rent,
+	}
+
+	ownerResponse, err := json.Marshal(ownerResp)
+	if err != nil {
+		logger.ZapLogger.Infow(models.CALCULATERENT, "Resp for", req.OwnerId, "JSON err", err)
+		return
+	}
+
+	targetMap[req.OwnerId] = ownerResponse
+
+	logger.ZapLogger.Infoln("Exit Calculate Rent")
+	return
+}
+
+func PayRent(request json.RawMessage, client *models.Client, db db.DbOperations) (targetMap map[string][]byte) {
+	logger.ZapLogger.Infoln("Enter Pay Rent")	
+	var req models.ReqPayRent
+	targetMap = make(map[string][]byte, 2)
+
+	err := json.Unmarshal(request, &req)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.PAYRENT, "JSON Error", err)
+		return
+	}
+	playerId := client.PlayerId
+
+	ownerCash, err := db.GetPlayerCash(req.OwnerId)
+	if err != nil {
+		logger.ZapLogger.Infow(models.PAYRENT, "DB Error", err)
+		return
+	}
+
+	updatedOwnerCash := ownerCash - req.Rent
+	updatedPlayerCash := req.Cash - req.Rent
+
+	err = db.UpdatePlayerCash(playerId, updatedPlayerCash)
+	if err != nil {
+		logger.ZapLogger.Infow(models.PAYRENT, "DB Error", err)
+		return
+	}
+
+	err = db.UpdatePlayerCash(req.OwnerId, updatedOwnerCash)
+	if err != nil {
+		logger.ZapLogger.Infow(models.PAYRENT, "DB Error", err)
+		return
+	}
+
+	playerResp := models.RespPayRent{
+		Cash: updatedPlayerCash,
+		Paid: true,
+		OwnerId: req.OwnerId,
+	}
+
+	PlayerResponse, err := json.Marshal(playerResp)
+	if err != nil {
+		logger.ZapLogger.Infow(models.PAYRENT, "Resp for", playerId, "State", models.PAYRENT, "JSON err", err)
+		return
+	}
+
+	targetMap[playerId] = PlayerResponse
+
+	ownerResp := models.RespPayRent{
+		Cash: updatedOwnerCash,
+		Paid: true,
+		RenterId: playerId,
+	}
+
+	ownerResponse, err := json.Marshal(ownerResp)
+	if err != nil {
+		logger.ZapLogger.Infow(models.PAYRENT, "Resp for", req.OwnerId, "State", models.PAYRENT, "JSON err", err)
+		return
+	}
+
+	targetMap[req.OwnerId] = ownerResponse
+
+	logger.ZapLogger.Infoln("Exit Pay Rent")
 	return
 }

@@ -25,10 +25,11 @@ type ReqMovePos struct {
 }
 
 type RespMovePos struct {
-	NewPos   int    `json:"new_pos"`
-	BlockId  string `json:"block_id"`
-	Sold     bool   `json:"sold"`
-	Type     string `json:"type"`
+	NewPos	int		`json:"new_pos"`
+	BlockId	string	`json:"block_id"`
+	State	string	`json:"sold"`
+	Type	string	`json:"type"`
+	OwnerId	string	`json:"owner_id"`
 }
 
 type ReqBuyBlock struct {
@@ -87,4 +88,33 @@ type RespChangePlayer struct {
 	NextPlayer	string	`json:"next_player"`
 	Playing		bool	`json:"playing"`
 
+}
+
+type ReqCalculateRent struct {
+	BlockId		string	`json:"block_id"`
+	BlockType	string	`json:"block_type"`
+	Price		int		`json:"price"`
+	OwnerId		string	`json:"owner_id"`
+
+}
+
+type RespCalculateRent struct {
+	BlockId		string	`json:"block_id"`
+	BlockType	string	`json:"block_type"`
+	OwnerId		string	`json:"owner_id"`
+	RenterId	string	`json:"renter_id"`
+	Rent		int		`json:"rent"`
+}
+
+type ReqPayRent struct {
+	Cash		int		`json:"cash"`
+	Rent		int		`json:"rent"`
+	OwnerId		string	`json:"owner_id"`
+}
+
+type RespPayRent struct {
+	Cash		int		`json:"cash"`
+	Paid		bool	`json:"paid"`
+	OwnerId		string	`json:"owner_id"`
+	RenterId	string	`json:"renter_id"`
 }
