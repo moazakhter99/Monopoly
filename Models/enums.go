@@ -31,6 +31,7 @@ const (
 
 	BLOCKED = "BLOCKED"
 	SOLD = "SOLD"
+	OWNED = "OWNED"
 
 	BASE = "BASE"
 	COLOUR = "COLOUR"

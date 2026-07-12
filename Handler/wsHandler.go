@@ -13,6 +13,9 @@ import (
 var upgrader = websocket.Upgrader{
     ReadBufferSize:  1024,
     WriteBufferSize: 1024,
+    CheckOrigin: func(r *http.Request) bool {
+        return true
+    },
 }
 
 type HandleWsGameController struct {
@@ -45,7 +48,7 @@ func (game *HandleWsGameController) WSHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 	// defer conn.Close()
-
+	logger.ZapLogger.Infow("Request", "URI", r.RequestURI)
 	// playerId := r.Context().Value("playerId").(string)
     gameId := r.URL.Query().Get("gameId")
     playerId := r.URL.Query().Get("playerId")

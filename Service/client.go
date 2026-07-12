@@ -58,7 +58,8 @@ func (c *Client) ReadMessage() {
 			PlayerId: c.PlayerId,
 			GameId: c.GameId,
 		}
-		message.Client = &clientDetail		
+		message.Client = &clientDetail
+		c.logger.Infow("Read", "Msg", message)	
 
 		c.gameHub.ReadMsg <- message
 

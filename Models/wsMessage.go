@@ -14,6 +14,7 @@ type WsError struct {
 }
 
 type Request struct {
+	Roll bool `json:"roll"`
 }
 
 type RespDiceRoll struct {
@@ -27,7 +28,8 @@ type ReqMovePos struct {
 type RespMovePos struct {
 	NewPos	int		`json:"new_pos"`
 	BlockId	string	`json:"block_id"`
-	State	string	`json:"sold"`
+	BlockName	string	`json:"block_name"`
+	State	string	`json:"state"`
 	Type	string	`json:"type"`
 	OwnerId	string	`json:"owner_id"`
 }

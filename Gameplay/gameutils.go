@@ -2,6 +2,7 @@ package gameplay
 
 import (
 	models "Monopoly/Models"
+	"encoding/json"
 	"math/rand/v2"
 )
 
@@ -113,4 +114,22 @@ func cityRentCalculation(baseRent int, status string) (rent int) {
 	}
 
 	return
+}
+
+func callChangePlayer(client *models.Client, readCh chan<- models.WSMessage) {
+
+	changePlayerReq := models.Request{}
+	payload, err := json.Marshal(changePlayerReq)
+	if err != nil {
+		return
+	}
+
+	changePlayer := models.WSMessage{
+		Type: models.CHANGEPLAYER,
+		Client: client,
+		Payload: payload,
+	}
+
+	readCh <- changePlayer
+
 }

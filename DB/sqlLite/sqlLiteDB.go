@@ -194,16 +194,17 @@ func (l *SqlLite) UpdatePlayerPos(playerId string, position int) (err error) {
 
 func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Block, err error) {
 
-	query := `SELECT block_id, block_type from game_board where position = ?`
+	query := `SELECT block_id, block_type, block_name from game_board where position = ?`
 
 	row := l.DB.QueryRow(query, position)
 
 	var (
 		block_id   sql.NullString
 		block_type sql.NullString
+		block_name sql.NullString
 	)
 
-	err = row.Scan(&block_id, &block_type)
+	err = row.Scan(&block_id, &block_type, &block_name)
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
@@ -212,17 +213,14 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 	block = &models.Block{
 		BlockId: block_id.String,
 		Type:    block_type.String,
+		BlockName: block_name.String,
 	}
 
-	playerId, err := l.GetBlockOwner(block.BlockId, gameId)
-	if err != nil {
-		logger.ZapLogger.Errorw("SQL Err", "Error", err)
-		return
-	}
-
-	if playerId != "" {
-		block.State = models.SOLD
-		block.OwnerId = playerId
+	if block.Type != models.SPECIALCARD {
+		playerId, _ := l.GetBlockOwner(block.BlockId, gameId)
+		if playerId != "" {
+			block.OwnerId = playerId
+		}
 	}
 
 	return
@@ -286,12 +284,12 @@ func (l *SqlLite) GetBlockInfoById(blockId string) (block *models.Block, err err
 	return
 }
 
-func (l *SqlLite) UpdatePlayerCard(playerId, gameId, blockId string) (err error) {
+func (l *SqlLite) UpdatePlayerCard(playerId, gameId, blockId, status string) (err error) {
 	logger.ZapLogger.Infoln("Enter Update Player Card")
 
-	query := `INSERT INTO game_player (player_id, game_id, card_id) VALUES (?, ?, ?)`
+	query := `INSERT INTO game_player (player_id, game_id, card_id, status) VALUES (?, ?, ?, ?)`
 
-	_, err = l.DB.Exec(query, playerId, gameId, blockId)
+	_, err = l.DB.Exec(query, playerId, gameId, blockId, status)
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
@@ -343,7 +341,7 @@ func (l *SqlLite) UpdatePlayerCash(playerId string, cash int) (err error) {
 
 	query := `UPDATE player SET cash = ? WHERE player_id = ?`
 
-	_, err = l.DB.Exec(query, playerId)
+	_, err = l.DB.Exec(query, cash, playerId)
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
@@ -442,12 +440,12 @@ func (l *SqlLite) UpdateGetOutOfJailCard(playerId, gameId string) (err error) {
 	return
 }
 
-func (l *SqlLite) DeleteGetOutOfJailCard(playerId, gameId string) (err error) {
+func (l *SqlLite) DeleteGetOutOfJailCard(playerId, gameId, cardId string) (err error) {
 	logger.ZapLogger.Infoln("Enter Delete Get Out of Jail")
 
 	query := `DELETE FROM game_player WHERE player_id = ? AND game_id = ? AND card_id = ?`
 
-	_, err = l.DB.Exec(query, playerId, gameId)
+	_, err = l.DB.Exec(query, playerId, gameId, cardId)
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
@@ -457,10 +455,9 @@ func (l *SqlLite) DeleteGetOutOfJailCard(playerId, gameId string) (err error) {
 	return
 }
 
-func (l *SqlLite) UpdatePlayerStatus(playerId, count string) (err error) {
+func (l *SqlLite) UpdatePlayerStatus(playerId, status string) (err error) {
 	logger.ZapLogger.Infoln("Enter Update Player Status")
 
-	status := models.BLOCKED + "_" + count
 	query := `UPDATE player SET status = ? WHERE player_id = ?`
 
 	_, err = l.DB.Exec(query, status, playerId)
@@ -495,7 +492,7 @@ func (l *SqlLite) GetNextPlayer(gameId string, seq int) (playerId string, err er
 func (l *SqlLite) GetPlayerSeqAndCount(playerId string) (seq, count int, err error) {
 	logger.ZapLogger.Infoln("Enter Get Player Seq and Count")
 
-	query := `SELECT p.seq, g.player_count FROM game as g JOIN player as p ON g.game_id = p.game_id WHERE p.payer_id = ?`
+	query := `SELECT p.seq, g.player_count FROM game as g JOIN player as p ON g.game_id = p.game_id WHERE p.player_id = ?`
 
 	row := l.DB.QueryRow(query, playerId)
 
@@ -519,7 +516,7 @@ func (l *SqlLite) GetPlayerSeqAndCount(playerId string) (seq, count int, err err
 func (l *SqlLite) GetCardOwnershipStatus(playerId, blockId string) (status string, err error) {
 	logger.ZapLogger.Infoln("Enter Get Card Ownership Status")
 
-	query := `SELECT status FROM game_palyer WHERE player_id = ? AND block_id = ?`
+	query := `SELECT status FROM game_player WHERE player_id = ? AND card_id = ?`
 
 	row := l.DB.QueryRow(query, playerId, blockId)
 

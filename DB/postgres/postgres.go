@@ -43,7 +43,7 @@ func (p *Postgres) GetNextPlayer(gameId string, seq int) (playerId string, err e
 }
 
 // DeleteGetOutOfJailCard implements [db.DbOperations].
-func (p *Postgres) DeleteGetOutOfJailCard(playerId string, GameId string) (err error) {
+func (p *Postgres) DeleteGetOutOfJailCard(playerId string, GameId, cardId string) (err error) {
 	panic("unimplemented")
 }
 
@@ -97,7 +97,7 @@ func (p *Postgres) GetBlockInfoById(blockId string) (block *models.Block, err er
 }
 
 // UpdatePlayerCard implements [db.DbOperations].
-func (p *Postgres) UpdatePlayerCard(playerId string, gameId string, blockId string) (err error) {
+func (p *Postgres) UpdatePlayerCard(playerId string, gameId string, blockId, status string) (err error) {
 	return
 }
 

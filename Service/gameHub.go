@@ -5,6 +5,7 @@ import (
 	gameplay "Monopoly/Gameplay"
 	models "Monopoly/Models"
 	"Monopoly/logger"
+	"errors"
 
 	"go.uber.org/zap"
 )
@@ -59,7 +60,7 @@ func (h *GameHub) ProcessEvent(message any) {
 
 	case models.MOVEPOS:
 
-		respByte = gameplay.MovePos(wsMsg.Payload, wsMsg.Client, *h.db)
+		respByte = gameplay.MovePos(wsMsg.Payload, wsMsg.Client, *h.db, h.ReadMsg)
 
 	case models.BUYBLOCK:
 
@@ -112,8 +113,15 @@ func (h *GameHub) ProcessEvent(message any) {
 	if diff {
 		for id, respMsgByte := range respByteMap {
 			respMsg.Payload = respMsgByte
+			logger.ZapLogger.Infoln(id)
 			cl := h.ClientMap[id]
-			cl.WriteMsg <- respMsg
+			if cl != nil {
+				cl.WriteMsg <- respMsg
+
+			} else {
+				err := errors.New("No Client Found")
+				logger.ZapLogger.Errorw(wsMsg.Type, "Client", id, "Error", err)
+			}
 		}
 
 	}
