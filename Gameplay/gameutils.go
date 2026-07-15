@@ -133,3 +133,57 @@ func callChangePlayer(client *models.Client, readCh chan<- models.WSMessage) {
 	readCh <- changePlayer
 
 }
+
+func checkPlayerCash(cash, fine int) (available bool) {
+	if cash >= fine {
+		return true
+	} else {
+		return false
+	}
+}
+
+func callCalculateRent(req *models.ReqCalculateRent, client *models.Client, readCh chan <- models.WSMessage) {
+	reqPayload, err := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	calRent := models.WSMessage{
+		Type: models.CALCULATERENT,
+		Client: client,
+		Payload: reqPayload,
+	}
+
+	readCh <- calRent
+}
+
+func callMovePos(dice int, client *models.Client, readCh chan <- models.WSMessage) {
+		newPosReq := models.ReqMovePos{
+			UpdateBy: dice,
+		}
+
+		newPosPayload, err := json.Marshal(newPosReq)
+		if err != nil {
+			return
+		}
+
+		movePos := models.WSMessage{
+			Type:    models.MOVEPOS,
+			Client:  client,
+			Payload: newPosPayload,
+		}
+
+		readCh <- movePos
+
+}
+
+func getCardNo() (value int) {
+	value = rand.IntN(6) + 1
+	return
+
+}
+
+
+func callActionCard(client *models.Client, readCh chan <- models.WSMessage) {
+
+}

@@ -194,7 +194,7 @@ func (l *SqlLite) UpdatePlayerPos(playerId string, position int) (err error) {
 
 func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Block, err error) {
 
-	query := `SELECT block_id, block_type, block_name from game_board where position = ?`
+	query := `SELECT block_id, block_type, block_name, price from game_board where position = ?`
 
 	row := l.DB.QueryRow(query, position)
 
@@ -202,9 +202,10 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 		block_id   sql.NullString
 		block_type sql.NullString
 		block_name sql.NullString
+		block_price sql.NullInt64
 	)
 
-	err = row.Scan(&block_id, &block_type, &block_name)
+	err = row.Scan(&block_id, &block_type, &block_name, &block_price)
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
@@ -214,6 +215,7 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 		BlockId: block_id.String,
 		Type:    block_type.String,
 		BlockName: block_name.String,
+		Price: int(block_price.Int64),
 	}
 
 	if block.Type != models.SPECIALCARD {
@@ -317,31 +319,33 @@ func (l *SqlLite) GetCardAction(cardNo string) (action string, err error) {
 	return
 }
 
-func (l *SqlLite) GetPlayerCash(playerId string) (cash int, err error) {
+func (l *SqlLite) GetPlayerCashPos(playerId string) (cash, pos int, err error) {
 	logger.ZapLogger.Infoln("Enter Get Player Cash")
 
-	query := `SELECT cash FROM player WHERE player_id = ?`
+	query := `SELECT cash, position FROM player WHERE player_id = ?`
 
 	row := l.DB.QueryRow(query, playerId)
 
 	var player_cash sql.NullInt64
-	err = row.Scan(&player_cash)
+	var player_pos sql.NullInt16
+	err = row.Scan(&player_cash, &player_pos)
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
 	cash = int(player_cash.Int64)
+	pos = int(player_pos.Int16)
 
 	return
 }
 
-func (l *SqlLite) UpdatePlayerCash(playerId string, cash int) (err error) {
+func (l *SqlLite) UpdatePlayerCash(playerId string, cash, pos int) (err error) {
 	logger.ZapLogger.Infoln("Update Player Cash")
 
-	query := `UPDATE player SET cash = ? WHERE player_id = ?`
+	query := `UPDATE player SET cash = ?, position = ? WHERE player_id = ?`
 
-	_, err = l.DB.Exec(query, cash, playerId)
+	_, err = l.DB.Exec(query, cash, pos, playerId)
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
@@ -581,5 +585,62 @@ func (l *SqlLite) GetPlayerStatusList(playerId, gameId string) (statusList []str
 	}
 
 	logger.ZapLogger.Infoln("Exit Get Player Status List")
+	return
+}
+
+func (l *SqlLite) GetPlayerStatus(playerId, gameId string) (status string, err error) {
+	logger.ZapLogger.Infoln("Enter Get Player Status")
+
+	query := `SELECT status FROM player WHERE player_id = ? and game_id = ?`
+
+	row := l.DB.QueryRow(query, playerId, gameId)
+
+	var player_status sql.NullString
+
+	err = row.Scan(&player_status)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
+
+	status = player_status.String
+
+	return
+}
+
+func (l *SqlLite) GetBlockInfo(blockType string, infoNo int) (cardInfo string, err error) {
+	logger.ZapLogger.Infoln("Enter Get Block Info")
+
+	query := `SELECT block_info FROM block_info WHERE block_type = ? AND info_no = ?`
+
+	row := l.DB.QueryRow(query, blockType, infoNo)
+
+	var card_info sql.NullString
+	err = row.Scan(&cardInfo)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
+
+	cardInfo = card_info.String
+
+	return
+}
+
+func (l *SqlLite) GetBlockPrice(blockId string) (price int, err error) {
+	logger.ZapLogger.Infoln("Enter Get Block Price")
+
+	query := `SELECT price FROM game_board WHERE block_id = ?`
+
+	row := l.DB.QueryRow(query, blockId)
+
+	var block_price sql.NullInt64
+	err = row.Scan(&block_price)
+	if err != nil {
+		return
+	}
+
+	price = int(block_price.Int64)
+	
 	return
 }

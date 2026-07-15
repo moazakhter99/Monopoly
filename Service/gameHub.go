@@ -39,6 +39,12 @@ func CreateNewGameHub(logger *zap.SugaredLogger, db db.DbOperations) *GameHub {
 	}
 }
 
+func (h *GameHub) Validate(req any) (message any, err error) {
+	logger.ZapLogger.Infoln("Start Validate Message")
+
+	return
+}
+
 func (h *GameHub) ProcessEvent(message any) {
 	logger.ZapLogger.Infoln("Start ProcessEvent")
 
@@ -74,7 +80,7 @@ func (h *GameHub) ProcessEvent(message any) {
 
 	case models.PAYRENT:
 
-		respByteMap = gameplay.PayRent(wsMsg.Payload, wsMsg.Client, *h.db)
+		respByteMap = gameplay.PayRent(wsMsg.Payload, wsMsg.Client, *h.db, h.ReadMsg)
 		diff = true
 		all = false
 
@@ -86,7 +92,7 @@ func (h *GameHub) ProcessEvent(message any) {
 
 	case models.JAIL:
 
-		respByte = gameplay.Jail(wsMsg.Payload, wsMsg.Client, *h.db)
+		respByte = gameplay.Jail(wsMsg.Payload, wsMsg.Client, *h.db, h.ReadMsg)
 
 	case models.CHANGEPLAYER:
 

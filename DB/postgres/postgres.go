@@ -12,6 +12,26 @@ type Postgres struct {
 	DB *sql.DB
 }
 
+// GetBlockInfo implements [db.DbOperations].
+func (p *Postgres) GetBlockInfo(blockType string, infoNo int) (cardInfo string, err error) {
+	panic("unimplemented")
+}
+
+// GetBlockPrice implements [db.DbOperations].
+func (p *Postgres) GetBlockPrice(blockId string) (price int, err error) {
+	panic("unimplemented")
+}
+
+// GetPlayerCashPos implements [db.DbOperations].
+func (p *Postgres) GetPlayerCashPos(playerId string) (cash int, pos int, err error) {
+	panic("unimplemented")
+}
+
+// GetPlayerStatus implements [db.DbOperations].
+func (p *Postgres) GetPlayerStatus(playerId string, gameId string) (status string, err error) {
+	panic("unimplemented")
+}
+
 // GetPlayerStatusList implements [db.DbOperations].
 func (p *Postgres) GetPlayerStatusList(playerId string, gameId string) (statusList []string, err error) {
 	panic("unimplemented")
@@ -83,7 +103,7 @@ func (p *Postgres) GetPlayerCash(playerId string) (cash int, err error) {
 }
 
 // UpdatePlayerCash implements [db.DbOperations].
-func (p *Postgres) UpdatePlayerCash(playerId string, cash int) (err error) {
+func (p *Postgres) UpdatePlayerCash(playerId string, cash, pos int) (err error) {
 	panic("unimplemented")
 }
 

@@ -32,15 +32,18 @@ type RespMovePos struct {
 	State	string	`json:"state"`
 	Type	string	`json:"type"`
 	OwnerId	string	`json:"owner_id"`
+	CardNo	int		`json:"card_no"`
+	CardInfo	string	`json:"card_info"`		
 }
 
 type ReqBuyBlock struct {
 	BlockId  string `json:"block_id"`
-	Price    int    `json:"price"`
-	Colour   string `json:"colour"`
-	CardNo   string `json:"card_no"`
-	Seq		 int	`json:"seq"`
-	Count	 int	`json:"count"`
+	// Pos      int    `json:"position"`
+	// Price    int    `json:"price"`
+	// Colour   string `json:"colour"`
+	// CardNo   string `json:"card_no"`
+	// Seq		 int	`json:"seq"`
+	// Count	 int	`json:"count"`
 }
 
 type RespBuyBlock struct {
@@ -48,15 +51,16 @@ type RespBuyBlock struct {
 	Buy      bool   `json:"buy"`
 	Cash     int    `json:"cash"`
 	Seq		 int	`json:"seq"`
-	ChangePlayer bool `json:"change_player"`
+	// ChangePlayer bool `json:"change_player"`
 }
 
 type ReqActionCard struct {
 	BlockId  string `json:"block_id"`
+	// Pos      int    `json:"position"`
 	CardId   string `json:"card_id"`
-	Price    int    `json:"price"`
-	Cash     int    `json:"cash"`
-	Pos      int    `json:"position"`
+	// Remark	 string	`json:"remark"`
+	// Price    int    `json:"price"`
+	// Cash     int    `json:"cash"`
 	Type     string `json:"type"`
 }
 
@@ -82,7 +86,7 @@ type RespJail struct {
 type ReqJail struct {
 	InJail		bool	`json:"In_jail"`
 	JailId		string	`json:"jail_id"`
-	Cash		int		`json:"cash"`
+	// Cash		int		`json:"cash"`
 	
 }
 
@@ -109,13 +113,13 @@ type RespCalculateRent struct {
 }
 
 type ReqPayRent struct {
-	Cash		int		`json:"cash"`
-	Rent		int		`json:"rent"`
-	OwnerId		string	`json:"owner_id"`
+	// Rent		int		`json:"rent"`
+	// OwnerId		string	`json:"owner_id"`
 }
 
 type RespPayRent struct {
 	Cash		int		`json:"cash"`
+	Rent		int		`json:"rent"`
 	Paid		bool	`json:"paid"`
 	OwnerId		string	`json:"owner_id"`
 	RenterId	string	`json:"renter_id"`

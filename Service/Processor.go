@@ -30,6 +30,7 @@ type GameHubProcessor interface {
 	// ReadMessage()
 	// WriteMessage()
 	ProcessEvent(message any)
+	Validate(req any) (message any, err error)
 }
 
 type ClinetProcessor interface {

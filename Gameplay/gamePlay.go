@@ -5,8 +5,9 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"errors"
 	"strconv"
-
+	"strings"
 )
 
 func RollDice(request json.RawMessage, client *models.Client, readCh chan<- models.WSMessage) (response json.RawMessage) {
@@ -22,7 +23,6 @@ func RollDice(request json.RawMessage, client *models.Client, readCh chan<- mode
 
 	if req.Roll {
 		diceVal = diceRoll()
-
 	}
 
 	resp := models.RespDiceRoll{
@@ -35,26 +35,7 @@ func RollDice(request json.RawMessage, client *models.Client, readCh chan<- mode
 		return
 	}
 
-	go func() {
-		newPosReq := models.ReqMovePos{
-			UpdateBy: diceVal,
-		}
-
-		newPosPayload, err := json.Marshal(newPosReq)
-		if err != nil {
-			logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
-			return
-		}
-
-		movePos := models.WSMessage{
-			Type:    models.MOVEPOS,
-			Client:  client,
-			Payload: newPosPayload,
-		}
-
-		readCh <- movePos
-
-	}()
+	go callMovePos(diceVal, client, readCh)
 
 	return
 }
@@ -72,19 +53,21 @@ func MovePos(request json.RawMessage, client *models.Client, db db.DbOperations,
 	playerId := client.PlayerId
 	gameId := client.GameId
 
-	player, err := db.GetPlayerInfoById(playerId)
+	cash, pos, err := db.GetPlayerCashPos(playerId)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
 		return
 	}
-	logger.ZapLogger.Infow(models.MOVEPOS, "Current Position", player.Pos)
+	logger.ZapLogger.Infow(models.MOVEPOS, "Current Position", pos)
 
-	newPos := updatePos(req.UpdateBy, player.Pos)
-	err = db.UpdatePlayerPos(playerId, newPos)
+	newPos := updatePos(req.UpdateBy, pos)
+	// err = db.UpdatePlayerPos(playerId, newPos)
+	err = db.UpdatePlayerCash(playerId, cash, newPos)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
 	}
 
+	logger.ZapLogger.Infow(models.MOVEPOS, "Player Id", playerId, "New Pos", newPos)
 	block, err := db.GetBlockState(newPos, gameId)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
@@ -95,12 +78,32 @@ func MovePos(request json.RawMessage, client *models.Client, db db.DbOperations,
 	case "":
 		// Buy or Action Card
 		if block.Type == models.SPECIALCARD {
+			var status string
 			resp = models.RespMovePos{
 				BlockId:  block.BlockId,
 				NewPos:   newPos,
 				Type:     block.Type,
 				BlockName: block.BlockName,
 			}
+			if block.BlockName == models.COMMUNITYCHEST || block.BlockName == models.CHANCE {
+				resp.CardNo = getCardNo()
+				// cardInfo, err := db.GetBlockInfo(block.BlockName, resp.CardNo)
+				// if err != nil {
+				// 	logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
+				// 	return
+				// }
+				// resp.CardInfo = cardInfo
+				status = models.ACTIONCARD + "_" + strconv.Itoa(resp.CardNo) + "_" + block.BlockName
+			}
+
+			status = models.ACTIONCARD + "_" + block.BlockName
+			err = db.UpdatePlayerStatus(playerId, status)
+			if err != nil {
+				logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
+				return
+			}
+			// go callActionCard(client, readCh)
+
 		} else {
 			resp = models.RespMovePos{
 				BlockId:  block.BlockId,
@@ -132,6 +135,13 @@ func MovePos(request json.RawMessage, client *models.Client, db db.DbOperations,
 			OwnerId:  block.OwnerId,
 		}
 
+		calRentReq := &models.ReqCalculateRent{
+			BlockId: block.BlockId,
+			BlockType: block.Type,
+			Price: block.Price,
+			OwnerId: block.OwnerId,
+		}
+		go callCalculateRent(calRentReq, client, readCh)
 	}
 
 	logger.ZapLogger.Infow(models.MOVEPOS, 
@@ -161,20 +171,27 @@ func BuyBlock(request json.RawMessage, client *models.Client, db db.DbOperations
 	}
 	playerId := client.PlayerId
 	gameId := client.GameId
+	buy = false
 
-	cash, err := db.GetPlayerCash(playerId)
+	cash, pos, err := db.GetPlayerCashPos(playerId)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
 		return
 	}
 
-	if cash < req.Price {
+	price, err := db.GetBlockPrice(req.BlockId)
+	// block, err := db.GetBlockState(req.Pos, gameId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
+		return
+	}
+
+	if checkPlayerCash(cash, price) {
+		updatedCash = cash - price
+		buy = true
+	} else {
 		logger.ZapLogger.Infow("Player Low on Cash", "Player Id", playerId, "Cash", cash)
 		buy = false
-
-	} else {
-		updatedCash = cash - req.Price
-		buy = true
 
 	}
 
@@ -192,15 +209,16 @@ func BuyBlock(request json.RawMessage, client *models.Client, db db.DbOperations
 		BlockId:  req.BlockId,
 		Buy:      buy,
 		Cash:     updatedCash,
-		ChangePlayer: true,
 	}
 
-	err = db.UpdatePlayerCash(playerId, updatedCash)
+	err = db.UpdatePlayerCash(playerId, updatedCash, pos)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
 		return
 	}
-	go callChangePlayer(client, readCh)
+	if buy {
+		go callChangePlayer(client, readCh)
+	}
 
 	response, err = json.Marshal(resp)
 	if err != nil {
@@ -220,23 +238,27 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 		logger.ZapLogger.Errorw(models.ACTIONCARD, "JSON Error", err)
 		return
 	}
+
 	playerId := client.PlayerId
 	gameId := client.GameId
+	inJail := false
 
-	resp := models.RespActionCard{
-		InJail: false,
-	}
-	// Decide where where to cash value from
-	cash, err := db.GetPlayerCash(playerId)
+	cash, pos, err := db.GetPlayerCashPos(playerId)
 	if err != nil {
-		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
+		logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 		return
 	}
-	req.Cash = cash
-	resp.Cash = cash
-	logger.ZapLogger.Infow(models.ACTIONCARD, "Current Cash", req.Cash)
 
-	switch req.Type {
+	blockType := req.Type
+	// block, err := db.GetBlockState(req.Pos, gameId)
+	// if err != nil {
+	// 	logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+	// 	return
+	// }
+
+	logger.ZapLogger.Infow(models.ACTIONCARD, "Current Cash", cash)
+
+	switch blockType {
 
 	case models.COMMUNITYCHEST:
 		action, err := db.GetCardAction(req.CardId)
@@ -250,7 +272,7 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 			logger.ZapLogger.Errorw(models.ACTIONCARD, "Conversion Error", err)
 			return
 		}
-		resp.Cash = req.Cash + chestValue
+		cash += chestValue
 		logger.ZapLogger.Infow(models.ACTIONCARD, "Update Cash", chestValue)
 
 	case models.CHANCE:
@@ -265,19 +287,19 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 		switch action {
 
 		case models.JUMPTOMUMBAI:
-			resp.Pos, err = db.GetPosByBlockName("Mumbai")
+			pos, err = db.GetPosByBlockName("Mumbai")
 			if err != nil {
 				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 				return
 			}
 
 		case models.GOTOSTART:
-			resp.Pos, err = db.GetPosByBlockName("Go Start")
+			pos, err = db.GetPosByBlockName("Go Start")
 			if err != nil {
 				logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 				return
 			}
-			resp.Cash = cash + 2000
+			cash += 2000
 
 		case models.HOUSEHOTELFINE:
 			statusList, err := db.GetPlayerStatusList(playerId, gameId)
@@ -287,7 +309,12 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 			}
 
 			fine := houseHotelFine(statusList)
-			resp.Cash = req.Cash - fine
+			if checkPlayerCash(cash, fine) {
+				cash -= fine
+			} else {
+				err = errors.New("Not Enough Cash")
+				return
+			}
 
 		case models.GETOUTOFJAIL:
 			err = db.UpdateGetOutOfJailCard(playerId, gameId)
@@ -302,17 +329,22 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 				logger.ZapLogger.Infow(models.ACTIONCARD, "Conversion Error", err, "Invalid Action", action)
 				return
 			}
-			resp.Cash = req.Cash + value
+			cash += value
 			logger.ZapLogger.Infow(models.ACTIONCARD, "Value", value)
 
 		}
 
 	case models.INCOMETAX:
-		resp.Cash = req.Cash - req.Price
+		price, err := db.GetBlockPrice(req.BlockId)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+			return
+		}
+		cash -= price
 
 	case models.JAIL:
-		resp.Pos = req.Pos
-		resp.InJail = true
+		// resp.Pos = req.Pos
+		inJail = true
 		status := models.BLOCKED + "_3"
 
 		err = db.UpdatePlayerStatus(playerId, status)
@@ -331,8 +363,8 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 			return
 		}
 
-		resp.Pos = jailPos
-		resp.InJail = true
+		pos = jailPos
+		inJail = true
 		status := models.BLOCKED + "_3"
 
 		err = db.UpdatePlayerStatus(playerId, status)
@@ -342,16 +374,39 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 		}
 
 	case models.PROPERTYTAX:
-		resp.Cash = req.Cash - req.Price
+		price, err := db.GetBlockPrice(req.BlockId)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+			return
+		}
+		cash -= price
 
 	case models.GOTOSTART:
-		resp.Cash = req.Cash - req.Price
+		price, err := db.GetBlockPrice(req.BlockId)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+			return
+		}
+		cash -= price
 
-	default:
-		logger.ZapLogger.Errorw(models.ACTIONCARD, "Invalid Type", req.Type)
 	}
 
 	// Update Player Remaining
+	err = db.UpdatePlayerCash(playerId, cash, pos)
+	if err != nil {
+		logger.ZapLogger.Infow(models.ACTIONCARD, "DB Error", err)
+		return
+	}
+
+	if !inJail {
+		go callChangePlayer(client, readCh)
+	}
+
+	resp := models.RespActionCard{
+		Cash: cash,
+		Pos: pos,
+		InJail: inJail,
+	}
 
 	response, err = json.Marshal(resp)
 	if err != nil {
@@ -363,7 +418,7 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 	return
 }
 
-func Jail(request json.RawMessage, client *models.Client, db db.DbOperations) (response json.RawMessage) {
+func Jail(request json.RawMessage, client *models.Client, db db.DbOperations, readCh chan<- models.WSMessage) (response json.RawMessage) {
 	logger.ZapLogger.Infoln("Enter Jail")
 	var req models.ReqJail
 	var updatedCash int
@@ -377,12 +432,22 @@ func Jail(request json.RawMessage, client *models.Client, db db.DbOperations) (r
 	playerId := client.PlayerId
 	gameId := client.GameId
 
+	if !req.InJail {
+		return
+	}
+
+	cash, pos, err := db.GetPlayerCashPos(playerId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
+		return
+	}
+
 	switch req.JailId {
 
 	case "Jail1":
-		updatedCash = req.Cash - 500
+		updatedCash = cash - 500
 		logger.ZapLogger.Infow(models.JAIL, "Updated Cash", updatedCash)
-		err = db.UpdatePlayerCash(playerId, updatedCash)
+		err = db.UpdatePlayerCash(playerId, updatedCash, pos)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.JAIL, "DB Error", err)
 			return
@@ -403,7 +468,7 @@ func Jail(request json.RawMessage, client *models.Client, db db.DbOperations) (r
 			return
 		}
 		inJail = false
-		updatedCash = req.Cash
+		updatedCash = cash
 
 		err = db.UpdatePlayerStatus(playerId, "")
 		if err != nil {
@@ -414,7 +479,7 @@ func Jail(request json.RawMessage, client *models.Client, db db.DbOperations) (r
 	case "Jail3":
 		// The player is blocked at the front end and they are also checked at backend
 		inJail = req.InJail
-		updatedCash = req.Cash
+		updatedCash = cash
 
 	}
 	
@@ -423,12 +488,14 @@ func Jail(request json.RawMessage, client *models.Client, db db.DbOperations) (r
 		InJail: inJail,
 	}
 
+	go callChangePlayer(client, readCh)
+
 	response, err = json.Marshal(resp)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.JAIL, "JSON Error", err)
 		return
 	}
-
+	
 	logger.ZapLogger.Infow(models.JAIL, "Resp", string(response))
 	logger.ZapLogger.Infoln("Exit Jail")
 	return
@@ -496,6 +563,7 @@ func CalculateRent(request json.RawMessage, client *models.Client, db db.DbOpera
 		logger.ZapLogger.Errorw(models.CALCULATERENT, "JSON Error", err)
 		return
 	}
+
 	playerId := client.PlayerId
 	gameId := client.GameId
 	baseRent := req.Price * 10 / 100
@@ -524,6 +592,13 @@ func CalculateRent(request json.RawMessage, client *models.Client, db db.DbOpera
 
 	default:
 
+	}
+
+	status := models.PAYRENT + "-" + strconv.Itoa(rent) + "-" + req.OwnerId
+	err = db.UpdatePlayerStatus(playerId, status)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.CALCULATERENT, "DB Error", err)
+		return
 	}
 
 	playerResp := models.RespCalculateRent{
@@ -565,7 +640,7 @@ func CalculateRent(request json.RawMessage, client *models.Client, db db.DbOpera
 	return
 }
 
-func PayRent(request json.RawMessage, client *models.Client, db db.DbOperations) (targetMap map[string][]byte) {
+func PayRent(request json.RawMessage, client *models.Client, db db.DbOperations, readCh chan<- models.WSMessage) (targetMap map[string][]byte) {
 	logger.ZapLogger.Infoln("Enter Pay Rent")	
 	var req models.ReqPayRent
 	targetMap = make(map[string][]byte, 2)
@@ -576,23 +651,46 @@ func PayRent(request json.RawMessage, client *models.Client, db db.DbOperations)
 		return
 	}
 	playerId := client.PlayerId
-	logger.ZapLogger.Infow(models.PAYRENT, "Owner Id", req.OwnerId)
-	ownerCash, err := db.GetPlayerCash(req.OwnerId)
+	gameId := client.GameId
+
+	status, err := db.GetPlayerStatus(playerId, gameId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.PAYRENT, "DB Error", err)
+		return
+	}
+
+	statusList := strings.Split(status, "-")
+	ownerId := statusList[2]
+	rent, err := strconv.Atoi(statusList[1])
+	if err != nil {
+		logger.ZapLogger.Errorw(models.PAYRENT, "Conversion Error", err)
+		return
+	}
+
+	playerCash, playerPos, err := db.GetPlayerCashPos(playerId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.PAYRENT, "DB Error", err)
+		return
+	}
+
+	logger.ZapLogger.Infow(models.PAYRENT, "Owner Id", ownerId)
+	ownerCash, ownerPos, err := db.GetPlayerCashPos(ownerId)
 	if err != nil {
 		logger.ZapLogger.Infow(models.PAYRENT, "DB Error", err)
 		return
 	}
 
-	updatedOwnerCash := ownerCash - req.Rent
-	updatedPlayerCash := req.Cash - req.Rent
+	updatedOwnerCash := ownerCash - rent
+	updatedPlayerCash := playerCash - rent
 
-	err = db.UpdatePlayerCash(playerId, updatedPlayerCash)
+	// Add the correct Pos
+	err = db.UpdatePlayerCash(playerId, updatedPlayerCash, playerPos)
 	if err != nil {
 		logger.ZapLogger.Infow(models.PAYRENT, "DB Error", err)
 		return
 	}
 
-	err = db.UpdatePlayerCash(req.OwnerId, updatedOwnerCash)
+	err = db.UpdatePlayerCash(ownerId, updatedOwnerCash, ownerPos)
 	if err != nil {
 		logger.ZapLogger.Infow(models.PAYRENT, "DB Error", err)
 		return
@@ -601,7 +699,8 @@ func PayRent(request json.RawMessage, client *models.Client, db db.DbOperations)
 	playerResp := models.RespPayRent{
 		Cash: updatedPlayerCash,
 		Paid: true,
-		OwnerId: req.OwnerId,
+		Rent: rent,
+		OwnerId: ownerId,
 	}
 
 	PlayerResponse, err := json.Marshal(playerResp)
@@ -609,22 +708,23 @@ func PayRent(request json.RawMessage, client *models.Client, db db.DbOperations)
 		logger.ZapLogger.Infow(models.PAYRENT, "Resp for", playerId, "State", models.PAYRENT, "JSON err", err)
 		return
 	}
-
 	targetMap[playerId] = PlayerResponse
 
 	ownerResp := models.RespPayRent{
 		Cash: updatedOwnerCash,
 		Paid: true,
+		Rent: rent,
 		RenterId: playerId,
 	}
 
 	ownerResponse, err := json.Marshal(ownerResp)
 	if err != nil {
-		logger.ZapLogger.Infow(models.PAYRENT, "Resp for", req.OwnerId, "State", models.PAYRENT, "JSON err", err)
+		logger.ZapLogger.Infow(models.PAYRENT, "Resp for", ownerId, "State", models.PAYRENT, "JSON err", err)
 		return
 	}
+	targetMap[ownerId] = ownerResponse
 
-	targetMap[req.OwnerId] = ownerResponse
+	go callChangePlayer(client, readCh)
 
 	logger.ZapLogger.Infoln("Exit Pay Rent")
 	return
