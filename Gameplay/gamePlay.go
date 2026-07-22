@@ -192,7 +192,6 @@ func BuyBlock(request json.RawMessage, client *models.Client, db db.DbOperations
 	} else {
 		logger.ZapLogger.Infow("Player Low on Cash", "Player Id", playerId, "Cash", cash)
 		buy = false
-
 	}
 
 	err = db.UpdatePlayerCard(playerId, gameId, req.BlockId)
