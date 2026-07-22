@@ -12,7 +12,7 @@ type DbOperations interface {
 	GetBlockState(position int, gameId string) (block *models.Block, err error)
 	UpdatePlayerPos(playerId string, position int) (err error)
 	GetBlockInfoById(blockId string) (block *models.Block, err error)
-	UpdatePlayerCard(playerId, gameId, blockId, status string) (err error)
+	UpdatePlayerCard(playerId, gameId, blockId string) (err error)
 	GetCardAction(cardNo string) (action string, err error)
 	GetPlayerCashPos(playerId string) (cash, pos int, err error)
 	UpdatePlayerCash(playerId string, cash, pos int) (err error)
@@ -31,5 +31,9 @@ type DbOperations interface {
 	GetPlayerStatus(playerId, gameId string) (status string, err error)
 	GetBlockInfo(blockType string, infoNo int) (cardInfo string, err error)
 	GetBlockPrice(blockId string) (price int, err error)
+	GetPlayerColourCount(playerId, blockId string) (cardCount int, cardColour string, err error)
+	UpdateCardStatus(playerId, gameId, blockId, status string) (err error)
+	GetCardStatus(playerId, gameId, blockId string) (status string, err error)
+	UpdateCardColour(playerId, colour string) (err error)
 
 }

@@ -286,12 +286,23 @@ func (l *SqlLite) GetBlockInfoById(blockId string) (block *models.Block, err err
 	return
 }
 
-func (l *SqlLite) UpdatePlayerCard(playerId, gameId, blockId, status string) (err error) {
+func (l *SqlLite) UpdateCardColour(playerId, colour string) (err error) {
+	logger.ZapLogger.Infoln("Enter Update Card Colour")
+
+	query := `UPDATE game_player SET = ? WHERE playerId = ? AND card_id IN (SELECT block_id FROM game_board WHERE colour = ?)`
+
+	_, err = l.DB.Exec(query, models.COLOUR, playerId, colour)
+
+	logger.ZapLogger.Infoln("Exit Uodate Card Count")
+	return
+}
+
+func (l *SqlLite) UpdatePlayerCard(playerId, gameId, blockId string) (err error) {
 	logger.ZapLogger.Infoln("Enter Update Player Card")
 
 	query := `INSERT INTO game_player (player_id, game_id, card_id, status) VALUES (?, ?, ?, ?)`
 
-	_, err = l.DB.Exec(query, playerId, gameId, blockId, status)
+	_, err = l.DB.Exec(query, playerId, gameId, blockId, models.BASE)
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
@@ -637,10 +648,67 @@ func (l *SqlLite) GetBlockPrice(blockId string) (price int, err error) {
 	var block_price sql.NullInt64
 	err = row.Scan(&block_price)
 	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
 
 	price = int(block_price.Int64)
 	
+	return
+}
+
+func (l *SqlLite) GetPlayerColourCount(playerId, blockId string) (cardCount int, cardColour string, err error) {
+	logger.ZapLogger.Infoln("Enter Get Player Colour Count")
+
+	query := `SELECT count(*), gb.colour FROM game_board AS gb 
+				JOIN game_player AS gp ON gb.block_id = gp.card_id 
+				WHERE gp.player_id = ? AND gb.colour = (
+				SELECT colour FROM  game_board WHERE block_id = ?) GROUP BY gb.colour`
+	
+	row := l.DB.QueryRow(query, playerId, blockId)
+
+	var card_count sql.NullInt16
+	var card_colour sql.NullString
+	err = row.Scan(&card_count, &card_colour)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
+
+	cardCount = int(card_count.Int16)
+	cardColour = card_colour.String
+
+	return
+}
+
+func (l *SqlLite) UpdateCardStatus(playerId, gameId, blockId, status string) (err error) {
+	logger.ZapLogger.Infoln("Enter Update Card Status")
+
+	query := `UPDATE game_player SET status = ? WHERE player_id = ? AND game_id = ? AND block_id = ?`
+
+	_, err = l.DB.Exec(query, status, playerId, gameId, blockId)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
+
+
+	return
+}
+
+func (l *SqlLite) GetCardStatus(playerId, gameId, blockId string) (status string, err error) {
+	logger.ZapLogger.Infoln("Enter Get Card Status")
+
+	query := `SELECT status FROM game_player WHERE player_id = ? AND game_id = ? AND blockId = ?`
+
+	row := l.DB.QueryRow(query, playerId, gameId, blockId)
+
+	var card_status sql.NullString
+	err = row.Scan(&card_status)
+	if err != nil {
+		logger.ZapLogger.Errorw("SQL Err", "Error", err)
+		return
+	}
+
 	return
 }

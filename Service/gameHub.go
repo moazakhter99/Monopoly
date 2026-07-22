@@ -99,7 +99,11 @@ func (h *GameHub) ProcessEvent(message any) {
 		respByteMap = gameplay.ChangePlayer(wsMsg.Payload, wsMsg.Client, *h.db)
 		diff = true
 		all = false
-	
+
+	case models.BUYPROPERTY:
+		
+		respByte = gameplay.BuyProperty(wsMsg.Payload, wsMsg.Client, *h.db)
+		
 	}
 
 	respMsg.Type = wsMsg.Type
