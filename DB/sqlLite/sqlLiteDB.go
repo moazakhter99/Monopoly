@@ -395,6 +395,13 @@ func (l *SqlLite) GetBlockInfoByBlockType(blockType string) (jailInfo []models.J
 		return
 	}
 
+	defer rows.Close()
+	if err = rows.Err(); err != nil {
+			logger.ZapLogger.Errorw("SQL Err", "Error", err)
+			return
+
+	}
+
 	for rows.Next() {
 
 		var (
@@ -581,6 +588,13 @@ func (l *SqlLite) GetPlayerStatusList(playerId, gameId string) (statusList []str
 	if err != nil {
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
+	}
+
+	defer rows.Close()
+	if err = rows.Err(); err != nil {
+			logger.ZapLogger.Errorw("SQL Err", "Error", err)
+			return
+
 	}
 
 	for rows.Next() {
