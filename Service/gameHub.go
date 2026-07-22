@@ -84,8 +84,6 @@ func (h *GameHub) ProcessEvent(message any) {
 		diff = true
 		all = false
 
-	case models.SELL:
-	
 	case models.ACTIONCARD:
 		
 		respByte = gameplay.ActionCard(wsMsg.Payload, wsMsg.Client, *h.db, h.ReadMsg)
@@ -104,6 +102,10 @@ func (h *GameHub) ProcessEvent(message any) {
 		
 		respByte = gameplay.BuyProperty(wsMsg.Payload, wsMsg.Client, *h.db)
 		
+	case models.SELLPROPERTY:
+
+		respByte = gameplay.SellProperty(wsMsg.Payload, wsMsg.Client, *h.db)
+	
 	}
 
 	respMsg.Type = wsMsg.Type

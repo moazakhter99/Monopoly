@@ -139,3 +139,20 @@ type RespBuyProperty struct {
 	Cash		int		`json:"cash"`
 
 }
+
+type ReqSellProperty struct {
+	BlockId		string	`json:"block_id"`
+	Property	string	`json:"property"`
+	Count		int		`json:"count"`
+
+}
+
+type RespSellProperty struct {
+	BlockId		string	`json:"block_id"`
+	Property	string	`json:"property"`
+	Count		int		`json:"count"`
+	Cash		int		`json:"cash"`
+	Sold		bool	`json:"sold"`
+	Status		string	`json:"status"`
+
+}

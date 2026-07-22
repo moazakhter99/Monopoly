@@ -4,6 +4,8 @@ import (
 	models "Monopoly/Models"
 	"encoding/json"
 	"math/rand/v2"
+	"strconv"
+	"strings"
 )
 
 
@@ -216,7 +218,23 @@ func getCardNo() (value int) {
 
 }
 
+func updateSellPropertyStatus(status string, count int) (updatedStatus string) {
 
-func callActionCard(client *models.Client, readCh chan <- models.WSMessage) {
+	if status == models.HOTEL {
+		updatedStatus = models.HOUSE_4
+		return
+	} else {
+		statusList := strings.Split(status, "_")
+		houseCount, _ := strconv.Atoi(statusList[1])
+		if count <= 3  && count != houseCount{
+			newCount := houseCount - count
+			updatedStatus =  statusList[0] + "_" + strconv.Itoa(newCount)
+		} else if count == houseCount {
+			updatedStatus = models.COLOUR 
+		} else {
+			return
+		}
+		return
+	}
 
 }
