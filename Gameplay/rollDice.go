@@ -36,7 +36,7 @@ func (g *RollDiceProc) Validate(reqMsg []byte) (payload any, err error) {
 }
 
 
-func (g *RollDiceProc) Play(payload any) (resp any, err error) {
+func (g *RollDiceProc) Play(payload any) (resp []byte, err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Player")
 	var diceVal int
 	req := payload.(models.ReqRolDice)
@@ -45,8 +45,14 @@ func (g *RollDiceProc) Play(payload any) (resp any, err error) {
 		diceVal = diceRoll()
 	}
 	
-	resp = models.RespDiceRoll{
+	response := models.RespDiceRoll{
 		DiceVal:  diceVal,
+	}
+
+	resp, err = json.Marshal(response)
+	if err != nil {
+		logger.ZapLogger.Errorw("JSON Error", "Error", err)
+		return
 	}
 
 	logger.ZapLogger.Infoln("Exit Roll Dice Player")

@@ -22,10 +22,11 @@ func main() {
 
 	port := viper.GetString("PORT")
 	database := viper.GetString("DATABASE")
+	chanBufferSize := viper.GetInt("BUFFER_SIZE")
 	logger.ZapLogger.Infow("Game Running on", "PORT", port)
 
 	r := mux.NewRouter()
-	wsRouter := router.NewRouter()
+	wsRouter := router.NewRouter(chanBufferSize)
 
 	var MonopolyDB db.DbOperations
 

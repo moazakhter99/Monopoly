@@ -16,19 +16,31 @@ type GpServer interface {
 
 type server struct {
 	route Router
+	action	string
+	msg []byte
 }
 
-func NewServer(r Router) *server {
+type Request struct {
+	Action string
+	Msg		[]byte
+	JsonMsg	any
+}
+
+func NewServer(r Router, ) *server {
 	return &server{
 		route: r,
 	}
 }
 
 func (s server) Write(action string, msg []byte) (err error) {
+	req := Request{
+		Action: action,
+		Msg: msg,
+	}
 	if err = s.validate(action); err != nil {
 		return
 	}
-	go s.route.router(action, msg)
+	go s.route.router(req)
 	return
 }
 
@@ -40,11 +52,15 @@ func (s server) WriteJson(action string, msg any) (err error) {
 	if err = s.validate(action); err != nil {
 		return
 	}
-	msgByte, err := json.Marshal(msg)
-	if err != nil {
-		return
+	// msgByte, err := json.Marshal(msg)
+	// if err != nil {
+	// 	return
+	// }
+	req := Request{
+		Action: action,
+		JsonMsg: msg,
 	}
-	go s.route.router(action, msgByte)
+	go s.route.router(req)
 
 	return
 }

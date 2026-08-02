@@ -126,3 +126,9 @@ type RespPayRent struct {
 	OwnerId		string	`json:"owner_id"`
 	RenterId	string	`json:"renter_id"`
 }
+
+type RespError struct {
+	Stage string `json:"stage"`
+	Error string `json:"error"`
+	Status string `json:"status"`
+}
