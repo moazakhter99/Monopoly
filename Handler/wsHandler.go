@@ -20,8 +20,8 @@ var upgrader = websocket.Upgrader{
 
 type HandleWsGameController struct {
 	// Processor service.RequestProcessor
-	// gameHub service.ClinetProcessor
-	gameHub service.GameHubProcessor
+	gameHub service.ClinetProcessor
+	// gameHub service.GameHubProcessor
 	hub *service.GameHub
 
 }
@@ -57,7 +57,7 @@ func (game *HandleWsGameController) WSHandler(w http.ResponseWriter, r *http.Req
 		"GameId", gameId,
 	)
 
-	client := service.CreateNewClient(playerId, gameId, conn, gameLog, game.hub)
+	client := service.CreateNewClient(playerId, conn, gameLog, game.hub)
 	game.hub.Register <- client
 	logger.ZapLogger.Infow("Player Created", "playerId", playerId, "GameId", gameId)
 

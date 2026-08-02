@@ -1,0 +1,70 @@
+package router
+
+import (
+	"encoding/json"
+	"errors"
+)
+
+
+type GpServer interface {
+	Write(action string, msg []byte) (err error)
+	Read() (msg []byte)
+	WriteJson(action string, msg any) (err error)
+	ReadJson(msg any) (err error)
+
+}
+
+type server struct {
+	route Router
+}
+
+func NewServer(r Router) *server {
+	return &server{
+		route: r,
+	}
+}
+
+func (s server) Write(action string, msg []byte) (err error) {
+	if err = s.validate(action); err != nil {
+		return
+	}
+	go s.route.router(action, msg)
+	return
+}
+
+func (s server) Read() (msg []byte) {
+	return s.route.readResponse()
+}
+
+func (s server) WriteJson(action string, msg any) (err error) {
+	if err = s.validate(action); err != nil {
+		return
+	}
+	msgByte, err := json.Marshal(msg)
+	if err != nil {
+		return
+	}
+	go s.route.router(action, msgByte)
+
+	return
+}
+
+func (s server) ReadJson(msg any) (err error) {
+	msgByte := s.route.readResponse()
+	err = json.Unmarshal(msgByte, msg)
+	if err != nil {
+		return
+	}
+	return
+}
+
+func (s server) validate(action string) (err error) {
+
+	if action == "" {
+		return errors.New("action cannot be emtpy")
+	}
+	if !s.route.inMap(action) {
+		return errors.New("action not available: " + action)
+	}
+	return
+}

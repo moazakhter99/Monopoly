@@ -1,4 +1,4 @@
-package routes
+package main
 
 import (
 	db "Monopoly/DB"

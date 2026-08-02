@@ -13,10 +13,12 @@ type WsError struct {
 	WsError int
 }
 
-type Request struct {
+type ReqRolDice struct {
 	Roll bool `json:"roll"`
 }
 
+type Request struct {
+}
 type RespDiceRoll struct {
 	DiceVal  int    `json:"dice_val"`
 }

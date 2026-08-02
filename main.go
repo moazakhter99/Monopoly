@@ -4,17 +4,15 @@ import (
 	db "Monopoly/DB"
 	"Monopoly/DB/postgres"
 	"Monopoly/DB/sqlLite"
+	gamehub "Monopoly/Gamehub"
 	handler "Monopoly/Handler"
-
-	// models "Monopoly/Models"
+	"Monopoly/router"
 	service "Monopoly/Service"
 	"Monopoly/load"
 	"Monopoly/logger"
-	"Monopoly/routes"
 	"net/http"
 
 	"github.com/gorilla/mux"
-	// "github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 )
 
@@ -23,11 +21,13 @@ func main() {
 	logger.Logger()
 
 	port := viper.GetString("PORT")
+	database := viper.GetString("DATABASE")
 	logger.ZapLogger.Infow("Game Running on", "PORT", port)
-	router := mux.NewRouter()
+
+	r := mux.NewRouter()
+	wsRouter := router.NewRouter()
 
 	var MonopolyDB db.DbOperations
-	database := viper.GetString("DATABASE")
 
 	switch database {
 	case "POSTGRES":
@@ -52,51 +52,28 @@ func main() {
 
 	}
 
-	// reqProc := service.CreateNewRequestProcessor(MonopolyDB, logger.ZapLogger)
 
 	healthReq := service.CreateHealthReq(MonopolyDB)
 	healthHandler := handler.NewGameController(healthReq)
-	router.HandleFunc("/health", healthHandler.GameHandler).Methods("GET")
+	r.HandleFunc("/health", healthHandler.GameHandler).Methods("GET")
 
-	initGameRouter := router.PathPrefix("/initGame").Subrouter()
-	routes.InitGameSubRouter(initGameRouter, MonopolyDB, logger.ZapLogger)
+	initGameRouter := r.PathPrefix("/initGame").Subrouter()
+	InitGameSubRouter(initGameRouter, MonopolyDB, logger.ZapLogger)
 
-	// gameRouter := router.PathPrefix("/game").Subrouter()
-	// routes.GameSubRouter(gameRouter, reqProc)
-	
+	getInfoRouter := r.PathPrefix("/info").Subrouter().Methods("GET")
+	GetInfoRouter(getInfoRouter.Subrouter(), MonopolyDB)
+
 	gameHub := service.CreateNewGameHub(logger.ZapLogger, MonopolyDB)
-	// go gameHub.Deregister()
-	
-	// wsClientProc := service.CreateNewClient(logger.ZapLogger, gameHub)
 	wsHandler := handler.NewWsGameController(gameHub)
-	router.HandleFunc("/ws", wsHandler.WSHandler)
-	go run(gameHub)
+	r.HandleFunc("/oldws", wsHandler.WSHandler)
+	// go run(gameHub)
 
-	getInfoRouter := router.PathPrefix("/info").Subrouter().Methods("GET")
-	routes.GetInfoRouter(getInfoRouter.Subrouter(), MonopolyDB)
+	client := service.CreateOtherClinet(wsRouter)
+	clientHandler := handler.CreateClientController(client)
+	r.HandleFunc("/ws", clientHandler.ClientHandler)
+	go gamehub.Monopoly(MonopolyDB, wsRouter)
 
-	http.ListenAndServe(":"+port, router)
-
-}
-
-
-func run(hub *service.GameHub) {
-	logger.ZapLogger.Infoln("Hub is running")
-	logger.ZapLogger.Infoln("Hub ID ", hub.Id)
-	for {
-
-		select {
-		case msg := <- hub.ReadMsg:
-			hub.ProcessEvent(msg)
-
-		case player := <- hub.Register:
-			logger.ZapLogger.Infoln(player)
-			hub.ClientMap[player.PlayerId] = player
-
-		case player := <- hub.Deregister:
-			delete(hub.ClientMap, player.PlayerId)
-
-		}
-	}
+	http.ListenAndServe(":"+port, r)
 
 }
+

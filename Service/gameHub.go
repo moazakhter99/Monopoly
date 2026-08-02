@@ -3,6 +3,9 @@ package service
 import (
 	db "Monopoly/DB"
 	gameplay "Monopoly/Gameplay"
+	// service "Monopoly/Service"
+
+	// gameplay "Monopoly/Gameplay"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"errors"
@@ -22,6 +25,7 @@ type GameHub struct {
 	Register chan *Client
 	Deregister chan *Client
 	db *db.DbOperations
+	// Game gameplay.Game
 
 }
 

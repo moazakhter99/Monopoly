@@ -12,7 +12,7 @@ import (
 
 type Client struct {
 	PlayerId string
-	GameId	 string
+	// GameId	 string
 	logger *zap.SugaredLogger
 	Conn *websocket.Conn
 	ReadMsg chan models.WSMessage
@@ -22,10 +22,10 @@ type Client struct {
 	
 }
 
-func CreateNewClient(playerId, gameId string, conn *websocket.Conn, logger *zap.SugaredLogger, hub *GameHub) *Client {
+func CreateNewClient(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger, hub *GameHub) *Client {
 	return &Client{
 		PlayerId: playerId,
-		GameId: gameId,
+		// GameId: gameId,
 		logger: logger,
 		ReadMsg: make(chan models.WSMessage),
 		WriteMsg: make(chan models.WSMessage),
@@ -56,7 +56,7 @@ func (c *Client) ReadMessage() {
 
 		clientDetail := models.Client{
 			PlayerId: c.PlayerId,
-			GameId: c.GameId,
+			GameId: "",
 		}
 		message.Client = &clientDetail
 		c.logger.Infow("Read", "Msg", message)	

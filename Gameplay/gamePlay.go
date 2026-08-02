@@ -12,7 +12,7 @@ import (
 
 func RollDice(request json.RawMessage, client *models.Client, readCh chan<- models.WSMessage) (response json.RawMessage) {
 	logger.ZapLogger.Infoln("Roll Dice")
-	var req models.Request
+	var req models.ReqRolDice
 	var diceVal int
 
 	err := json.Unmarshal(request, &req)

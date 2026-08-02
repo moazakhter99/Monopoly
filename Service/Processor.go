@@ -3,7 +3,6 @@ package service
 import (
 	db "Monopoly/DB"
 
-	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 )
 
@@ -34,7 +33,7 @@ type GameHubProcessor interface {
 }
 
 type ClinetProcessor interface {
-	UpgradeClinet(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger)
+	// UpgradeClinet(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger)
 	ReadMessage()
 	WriteMessage()
 }
