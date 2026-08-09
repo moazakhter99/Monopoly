@@ -1,6 +1,7 @@
 package handler
 
 import (
+	gameroom "Monopoly/Gameroom"
 	service "Monopoly/Service"
 	"Monopoly/logger"
 
@@ -20,7 +21,7 @@ var upgrader = websocket.Upgrader{
 
 type HandleWsGameController struct {
 	// Processor service.RequestProcessor
-	gameHub service.ClinetProcessor
+	gameHub gameroom.ClinetProcessor
 	// gameHub service.GameHubProcessor
 	hub *service.GameHub
 

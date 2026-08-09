@@ -1,6 +1,7 @@
 package router
 
 import (
+	"Monopoly/logger"
 	"encoding/json"
 	"errors"
 )
@@ -67,6 +68,7 @@ func (s server) WriteJson(action string, msg any) (err error) {
 
 func (s server) ReadJson(msg any) (err error) {
 	msgByte := s.route.readResponse()
+	logger.ZapLogger.Infoln("Write Msg: ", string(msgByte))
 	err = json.Unmarshal(msgByte, msg)
 	if err != nil {
 		return

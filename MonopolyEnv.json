@@ -1,5 +1,6 @@
 {
     "PORT":"3000",
     "DATABASE":"SQLLITE",
+    "BUFFER_SIZE": 3,
     "LOG_FILEPATH":"./monopoly.log"
 }

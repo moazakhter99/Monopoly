@@ -46,6 +46,7 @@ func (hc *GameHubController) HandleHub(req router.Request, wrChan chan []byte) {
 	action := req.Action
 	msg := req.Msg
 
+	// Send the Ws Message and get the payload
 	payload, err := hc.game.Validate(msg)
 	if err != nil {
 		logger.ZapLogger.Errorw("Validation Error", "Error", err)
@@ -99,8 +100,18 @@ func (hc *GameHubController) HandleHub(req router.Request, wrChan chan []byte) {
 		wrChan <- resp
 		return
 	}
+	// Put this ina correct response
+	response := models.WSMessage{
+		Type: models.ROLLDICE,
+		Payload: resp,
+	}
 
-	wrChan <- resp
+	respByte, _ := json.Marshal(response)
+	// Till Here
+
+	logger.ZapLogger.Infoln("Write Msg: ", respByte)
+	wrChan <- respByte
+	logger.ZapLogger.Infoln("Write Msg: ", resp)
 }
 
 // func CreateNewHub(logger *zap.SugaredLogger, db db.DbOperations) *NewHub {

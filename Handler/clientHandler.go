@@ -1,7 +1,9 @@
 package handler
 
 import (
-	service "Monopoly/Service"
+	gameroom "Monopoly/Gameroom"
+	"Monopoly/logger"
+
 	// "Monopoly/routes"
 	"net/http"
 
@@ -19,11 +21,11 @@ var cUpgrader = websocket.Upgrader{
 }
 
 type HandleClientController struct {
-	clientProc service.ClinetProcessor
+	clientProc gameroom.ClinetProcessor
 
 }
 
-func CreateClientController(proc service.ClinetProcessor) *HandleClientController {
+func CreateClientController(proc gameroom.ClinetProcessor) *HandleClientController {
 	return &HandleClientController{
 		clientProc: proc,
 	}
@@ -31,17 +33,29 @@ func CreateClientController(proc service.ClinetProcessor) *HandleClientControlle
 
 
 func (cl *HandleClientController) ClientHandler(w http.ResponseWriter, r *http.Request) {
+	logger.ZapLogger.Infoln("Enter Client Handler")
 
+	if r.Header.Get("Upgrade") != "websocket" {
+		http.Error(w, "Not a websocket handshake", http.StatusBadRequest)
+		return
+	}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		logger.ZapLogger.Errorw("WebSockert Upgrade", "'Error", err)
+		return
+	}
 
-	// hub := routes.CreateHubContoller()
+    gameId := r.URL.Query().Get("gameId")
+    playerId := r.URL.Query().Get("playerId")
+	logger.ZapLogger.Infow("Request", "gameId", gameId, "playerId", playerId, "URI", r.RequestURI)
 
-	// Get gameId
-	// Use it to find gameHub
-	// Get PlayerId
-	// Register Player to that game
+	// Complete Registration
+
+	cl.clientProc.UpgradeClinet(conn, playerId, gameId)	
 
 	go cl.clientProc.ReadMessage()
 	go cl.clientProc.WriteMessage()
 
+	logger.ZapLogger.Infoln("Exit Client Handler")
 }
 

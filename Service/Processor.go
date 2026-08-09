@@ -32,10 +32,4 @@ type GameHubProcessor interface {
 	Validate(req any) (message any, err error)
 }
 
-type ClinetProcessor interface {
-	// UpgradeClinet(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger)
-	ReadMessage()
-	WriteMessage()
-}
-
 

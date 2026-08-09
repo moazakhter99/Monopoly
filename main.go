@@ -5,11 +5,12 @@ import (
 	"Monopoly/DB/postgres"
 	"Monopoly/DB/sqlLite"
 	gamehub "Monopoly/Gamehub"
+	gameroom "Monopoly/Gameroom"
 	handler "Monopoly/Handler"
-	"Monopoly/router"
 	service "Monopoly/Service"
 	"Monopoly/load"
 	"Monopoly/logger"
+	"Monopoly/router"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -69,7 +70,7 @@ func main() {
 	r.HandleFunc("/oldws", wsHandler.WSHandler)
 	// go run(gameHub)
 
-	client := service.CreateOtherClinet(wsRouter)
+	client := gameroom.CreateOtherClinet(wsRouter)
 	clientHandler := handler.CreateClientController(client)
 	r.HandleFunc("/ws", clientHandler.ClientHandler)
 	go gamehub.Monopoly(MonopolyDB, wsRouter)

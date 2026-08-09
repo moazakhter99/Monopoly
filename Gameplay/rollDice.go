@@ -25,8 +25,9 @@ func CreateRollDice(db db.DbOperations) *RollDiceProc {
 
 func (g *RollDiceProc) Validate(reqMsg []byte) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Validate")
-	var req *models.Request
-	err = json.Unmarshal(reqMsg, req)
+	var req models.ReqRolDice
+	logger.ZapLogger.Infoln("Msg: ", string(reqMsg))
+	err = json.Unmarshal(reqMsg, &req)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.ROLLDICE, "Validation Error", err)
 		return
