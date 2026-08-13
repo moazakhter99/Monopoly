@@ -21,13 +21,15 @@ var cUpgrader = websocket.Upgrader{
 }
 
 type HandleClientController struct {
-	clientProc gameroom.ClinetProcessor
+	clientProc 	gameroom.ClinetProcessor
+	room 		gameroom.Room
 
 }
 
-func CreateClientController(proc gameroom.ClinetProcessor) *HandleClientController {
+func CreateClientController(proc gameroom.ClinetProcessor, r gameroom.Room) *HandleClientController {
 	return &HandleClientController{
 		clientProc: proc,
+		room: r,
 	}
 }
 

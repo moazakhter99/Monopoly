@@ -71,7 +71,8 @@ func main() {
 	// go run(gameHub)
 
 	client := gameroom.CreateOtherClinet(wsRouter)
-	clientHandler := handler.CreateClientController(client)
+	gameRoom := gameroom.CreateGameRoom()
+	clientHandler := handler.CreateClientController(client, gameRoom)
 	r.HandleFunc("/ws", clientHandler.ClientHandler)
 	go gamehub.Monopoly(MonopolyDB, wsRouter)
 
