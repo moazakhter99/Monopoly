@@ -1,7 +1,9 @@
 package gameplay
 
 import (
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
+	"Monopoly/logger"
 	"encoding/json"
 	"math/rand/v2"
 )
@@ -157,7 +159,7 @@ func callCalculateRent(req *models.ReqCalculateRent, client *models.Client, read
 	readCh <- calRent
 }
 
-func callMovePos(dice int, client *models.Client, readCh chan <- models.WSMessage) {
+func oldcallMovePos(dice int, client *models.Client, readCh chan <- models.WSMessage) {
 		newPosReq := models.ReqMovePos{
 			UpdateBy: dice,
 		}
@@ -175,6 +177,27 @@ func callMovePos(dice int, client *models.Client, readCh chan <- models.WSMessag
 
 		readCh <- movePos
 
+}
+
+func callMovePos(resp []byte, client *gameroom.NewClient, param map[string]string) {
+	var diceValResp models.RespDiceRoll
+	json.Unmarshal(resp, &diceValResp)
+
+	newPosReq := models.ReqMovePos{
+		UpdateBy: diceValResp.DiceVal,
+	}
+
+	req, err := json.Marshal(newPosReq)
+	if err != nil {
+		logger.ZapLogger.Infow(models.ROLLDICE, "Json Error", err)
+		return
+	}
+
+	err = client.Server.Write(models.MOVEPOS, req, param, nil)
+	if err != nil {
+		logger.ZapLogger.Errorw("WS Message Router", "Error", err)
+		
+	}
 }
 
 func getCardNo() (value int) {

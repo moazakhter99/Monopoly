@@ -53,7 +53,8 @@ func (cl *HandleClientController) ClientHandler(w http.ResponseWriter, r *http.R
 
 	// Complete Registration
 
-	cl.clientProc.UpgradeClinet(conn, playerId, gameId)	
+	player := cl.clientProc.UpgradeClinet(conn, playerId, gameId)
+	cl.room.AddPlayer(gameId, player)
 
 	go cl.clientProc.ReadMessage()
 	go cl.clientProc.WriteMessage()

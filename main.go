@@ -74,7 +74,7 @@ func main() {
 	gameRoom := gameroom.CreateGameRoom()
 	clientHandler := handler.CreateClientController(client, gameRoom)
 	r.HandleFunc("/ws", clientHandler.ClientHandler)
-	go gamehub.Monopoly(MonopolyDB, wsRouter)
+	go gamehub.Monopoly(MonopolyDB, wsRouter, gameRoom)
 
 	http.ListenAndServe(":"+port, r)
 

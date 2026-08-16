@@ -9,49 +9,50 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-
-
 type NewClient struct {
-	PlayerId string
-	ReadMsg chan models.WSMessage
-	WriteMsg chan models.WSMessage
-	Conn *websocket.Conn
-	Server	router.GpServer
+	PlayerId  string
+	GameId    string
+	ReadMsg   chan []byte
+	WriteMsg  chan []byte
+	Conn      *websocket.Conn
+	Server    router.GpServer
 	ConnClose func()
 }
-
 
 type ClinetProcessor interface {
 	// UpgradeClinet(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger)
 	ReadMessage()
 	WriteMessage()
-	UpgradeClinet(conn *websocket.Conn, PlayerId, GameId string)
+	UpgradeClinet(conn *websocket.Conn, PlayerId, GameId string) *NewClient
 }
 
 func CreateOtherClinet(r router.Router) *NewClient {
 	s := router.NewServer(r)
 	return &NewClient{
-		ReadMsg: make(chan models.WSMessage),
-		WriteMsg: make(chan models.WSMessage),
+		ReadMsg:  make(chan []byte),
+		WriteMsg: make(chan []byte),
 		// Conn: conn,
 		Server: s,
 	}
 }
 
-func (c *NewClient) UpgradeClinet(conn *websocket.Conn, PlayerId, GameId string) {
+func (c *NewClient) UpgradeClinet(conn *websocket.Conn, playerId, gameId string) *NewClient {
 	c.Conn = conn
-	c.PlayerId = PlayerId
+	c.PlayerId = playerId
+	c.GameId = gameId
+	return c
 }
 
 func (c *NewClient) ReadMessage() {
 	logger.ZapLogger.Infoln("Enter Read WS Message ")
-	defer func ()  {
+	defer func() {
 		// Complete deregister
 		// c.Conn.Close()
 	}()
 
 	for {
 		var message models.WSMessage
+		ReqParam := make(map[string]string, 2)
 
 		err := c.Conn.ReadJSON(&message)
 		if err != nil {
@@ -64,12 +65,14 @@ func (c *NewClient) ReadMessage() {
 
 		clientDetail := models.Client{
 			PlayerId: c.PlayerId,
-			GameId: "",
+			GameId:   "",
 		}
 		message.Client = &clientDetail
-		logger.ZapLogger.Infow("Read", "Msg", message)	
+		logger.ZapLogger.Infow("Read", "Msg", message)
+		ReqParam["Player"] = c.PlayerId
+		ReqParam["Game"] = c.GameId
 
-		err = c.Server.Write(message.Type, message.Payload)
+		err = c.Server.Write(message.Type, message.Payload, ReqParam, c.ReadMsg)
 		if err != nil {
 			// Write this error
 			logger.ZapLogger.Errorw("WS Message Router", "Error", err)
@@ -83,7 +86,7 @@ func (c *NewClient) ReadMessage() {
 
 func (c *NewClient) WriteMessage() {
 	logger.ZapLogger.Infoln("Enter Write WS Message ")
-	defer func ()  {
+	defer func() {
 		// Complete deregister
 		// c.Conn.Close()
 	}()
@@ -112,6 +115,6 @@ func (c *NewClient) WriteMessage() {
 
 	}
 
-	logger.ZapLogger.Infoln("Exit Write WS Message")	
+	logger.ZapLogger.Infoln("Exit Write WS Message")
 
 }
