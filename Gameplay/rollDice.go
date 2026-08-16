@@ -2,26 +2,26 @@ package gameplay
 
 import (
 	db "Monopoly/DB"
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
 )
 
-
-
 type RollDiceProc struct {
-	db 		db.DbOperations
-	client 	*models.Client
-	writeCh chan<- models.WSMessage
-
+	db        db.DbOperations
+	client    *gameroom.NewClient
+	room      *gameroom.GameRoom
+	clientMap map[string]*gameroom.NewClient
+	writeCh   chan<- models.WSMessage
 }
 
-func CreateRollDice(db db.DbOperations) *RollDiceProc {
+func CreateRollDice(db db.DbOperations, room *gameroom.GameRoom) *RollDiceProc {
 	return &RollDiceProc{
-		db: db,
+		db:   db,
+		room: room,
 	}
 }
-
 
 func (g *RollDiceProc) Validate(reqMsg []byte) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Validate")
@@ -36,47 +36,45 @@ func (g *RollDiceProc) Validate(reqMsg []byte) (payload any, err error) {
 	return req, err
 }
 
-
-func (g *RollDiceProc) Play(payload any) (resp []byte, err error) {
+func (g *RollDiceProc) Play(payload any, param map[string]string) (targetMap map[string][]byte, err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Player")
 	var diceVal int
+	targetMap = make(map[string][]byte)
 	req := payload.(models.ReqRolDice)
+	gameId := param["Game"]
+	playerId := param["Player"]
 
 	if req.Roll {
 		diceVal = diceRoll()
 	}
-	
-	response := models.RespDiceRoll{
-		DiceVal:  diceVal,
-	}
 
-	resp, err = json.Marshal(response)
+	response := models.RespDiceRoll{
+		DiceVal: diceVal,
+	}
+	logger.ZapLogger.Infow(models.ROLLDICE, "Dice Value", diceVal)
+
+	resp, err := json.Marshal(response)
 	if err != nil {
 		logger.ZapLogger.Errorw("JSON Error", "Error", err)
 		return
 	}
 
+	targetMap[""] = resp
+	g.room.UpdateGameState(gameId, playerId, models.ROLLDICE)
+
 	logger.ZapLogger.Infoln("Exit Roll Dice Player")
 	return
 }
 
-// func (g *RollDiceProc) StateManagement(reqType, state string) (err error) {
-// 	logger.ZapLogger.Infoln("Enter Roll Dice State Management")
+func (g *RollDiceProc) Response(targetMap map[string][]byte, param map[string]string, readChan chan<- []byte) (err error) {
+	logger.ZapLogger.Infoln("Enter Roll Dice Response")
+	respMsg := targetMap[""]
+	go callMovePos(respMsg, g.client, param)
 
-// 	logger.ZapLogger.Infoln("Exit Roll Dice State Management")
-// 	return
-// }
+	for _, client := range g.room.GamePlayerMap[param["Game"]] {
+		client.WriteMsg <- respMsg
+	}
 
-// func (g *RollDiceProc) Response(respMsg any, clientMap map[string]any) (response []byte, err error) {
-// 	logger.ZapLogger.Infoln("Enter Roll Dice Response")
-
-// 	resp := respMsg.(models.RespDiceRoll)
-// 	response, err = json.Marshal(resp)
-// 	if err != nil {
-// 		logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
-// 		return
-// 	}
-
-// 	logger.ZapLogger.Infoln("Exit Roll Dice Response")
-// 	return
-// }
+	logger.ZapLogger.Infoln("Exit Roll Dice Response")
+	return
+}

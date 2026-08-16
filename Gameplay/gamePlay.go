@@ -35,7 +35,7 @@ func RollDice(request json.RawMessage, client *models.Client, readCh chan<- mode
 		return
 	}
 
-	go callMovePos(diceVal, client, readCh)
+	go oldcallMovePos(diceVal, client, readCh)
 
 	return
 }
