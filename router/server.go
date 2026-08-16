@@ -8,9 +8,9 @@ import (
 
 
 type GpServer interface {
-	Write(action string, msg []byte) (err error)
+	Write(action string, msg []byte, reqParam map[string]string, readChan chan []byte) (err error)
 	Read() (msg []byte)
-	WriteJson(action string, msg any) (err error)
+	WriteJson(action string, msg any, readChan chan []byte) (err error)
 	ReadJson(msg any) (err error)
 
 }
@@ -25,6 +25,7 @@ type Request struct {
 	Action string
 	Msg		[]byte
 	JsonMsg	any
+	Param map[string]string
 }
 
 func NewServer(r Router, ) *server {
@@ -33,15 +34,16 @@ func NewServer(r Router, ) *server {
 	}
 }
 
-func (s server) Write(action string, msg []byte) (err error) {
+func (s server) Write(action string, msg []byte, reqParam map[string]string, readChan chan []byte) (err error) {
 	req := Request{
 		Action: action,
 		Msg: msg,
+		Param: reqParam,
 	}
 	if err = s.validate(action); err != nil {
 		return
 	}
-	go s.route.router(req)
+	go s.route.router(req, readChan)
 	return
 }
 
@@ -49,7 +51,7 @@ func (s server) Read() (msg []byte) {
 	return s.route.readResponse()
 }
 
-func (s server) WriteJson(action string, msg any) (err error) {
+func (s server) WriteJson(action string, msg any, readChan chan []byte) (err error) {
 	if err = s.validate(action); err != nil {
 		return
 	}
@@ -61,7 +63,7 @@ func (s server) WriteJson(action string, msg any) (err error) {
 		Action: action,
 		JsonMsg: msg,
 	}
-	go s.route.router(req)
+	go s.route.router(req, readChan)
 
 	return
 }
@@ -86,3 +88,5 @@ func (s server) validate(action string) (err error) {
 	}
 	return
 }
+
+func (s server) SendMsg()
