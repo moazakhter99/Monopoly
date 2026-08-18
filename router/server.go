@@ -89,4 +89,4 @@ func (s server) validate(action string) (err error) {
 	return
 }
 
-func (s server) SendMsg()
+// func (s server) SendMsg()
