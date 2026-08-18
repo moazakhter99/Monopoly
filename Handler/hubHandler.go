@@ -1,27 +1,13 @@
 package handler
 
 import (
-	db "Monopoly/DB"
 	gameplay "Monopoly/Gameplay"
-	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"Monopoly/router"
 	"encoding/json"
 
-	"go.uber.org/zap"
 )
-
-type NewHub struct {
-	Id       string
-	logger   *zap.SugaredLogger
-	ReadMsg  chan models.WSMessage
-	WriteMsg chan models.WSMessage
-	// ClientMap map[string]*service.Client
-	// Register chan *service.Client
-	// Deregister chan *service.Client
-	db db.DbOperations
-}
 
 type HubController interface {
 	HandleHub(msg []byte, wrChan chan []byte)
@@ -29,20 +15,15 @@ type HubController interface {
 
 type GameHubController struct {
 	game     gameplay.Game
-	gameRoom *gameroom.GameRoom
 }
 
-func CreateHubContoller(g gameplay.Game, gr *gameroom.GameRoom) *GameHubController {
+func CreateHubContoller(g gameplay.Game) *GameHubController {
 	return &GameHubController{
 		game:     g,
-		gameRoom: gr,
 	}
 }
 
 func (hc *GameHubController) HandleHub(req router.Request, readChan chan []byte) {
-
-	// wsMsg := message.(models.WSMessage)
-	// hub.Infow("ReadMsg", "Type", wsMsg.Type, "Message", string(wsMsg.Payload))
 
 	action := req.Action
 	msg := req.Msg
@@ -51,6 +32,7 @@ func (hc *GameHubController) HandleHub(req router.Request, readChan chan []byte)
 	// Send the Ws Message and get the payload
 	payload, err := hc.game.Validate(msg)
 	if err != nil {
+		// Either find a different way to send error or use the readChan as error Chan or just rename it
 		logger.ZapLogger.Errorw("Validation Error", "Error", err)
 		errResponse := models.RespError{
 			Stage:  models.VALIDATION,

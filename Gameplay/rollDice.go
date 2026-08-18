@@ -10,13 +10,10 @@ import (
 
 type RollDiceProc struct {
 	db        db.DbOperations
-	client    *gameroom.NewClient
-	room      *gameroom.GameRoom
-	clientMap map[string]*gameroom.NewClient
-	writeCh   chan<- models.WSMessage
+	room      gameroom.Room
 }
 
-func CreateRollDice(db db.DbOperations, room *gameroom.GameRoom) *RollDiceProc {
+func CreateRollDice(db db.DbOperations, room gameroom.Room) *RollDiceProc {
 	return &RollDiceProc{
 		db:   db,
 		room: room,
@@ -62,10 +59,21 @@ func (g *RollDiceProc) Play(payload any, param map[string]string) (targetMap map
 
 func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]string, readChan chan []byte) (err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Response")
-	respMsg := targetMap[""]
-	// go callMovePos(respMsg, g.client, param)
 
+	clientList := g.room.GetClientListByGame(param["Game"])
+	respMsg := targetMap[""]
 	resp, err := json.Marshal(respMsg)
+	if err != nil {
+		logger.ZapLogger.Errorw("JSON Error", "Error", err)
+		return
+	}
+
+	wsMessage := models.WSMessage{
+		Type: models.ROLLDICE,
+		Payload: resp,
+	}
+
+	wsResp, err := json.Marshal(wsMessage)
 	if err != nil {
 		logger.ZapLogger.Errorw("JSON Error", "Error", err)
 		return
@@ -74,6 +82,12 @@ func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]strin
 	go func() {
 		
 		diceValResp := respMsg.(models.RespDiceRoll)
+		cl, ok := clientList[param["Player"]]
+		if !ok {
+			logger.ZapLogger.Errorf("Client Not Found: %v", param["Player"])
+			return
+		} 
+
 		newPosReq := models.ReqMovePos{
 			UpdateBy: diceValResp.DiceVal,
 		}
@@ -84,15 +98,15 @@ func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]strin
 			return
 		}
 
-		err = g.client.Server.Write(models.MOVEPOS, req, param, nil)
+		err = cl.Server.Write(models.MOVEPOS, req, param, readChan)
 		if err != nil {
 			logger.ZapLogger.Errorw("WS Message Router", "Error", err)
 		}
 		
 	}()
 
-	for _, client := range g.room.GamePlayerMap[param["Game"]] {
-		client.WriteMsg <- resp
+	for _, client := range clientList {
+		client.WriteMsg <- wsResp
 	}
 
 	logger.ZapLogger.Infoln("Exit Roll Dice Response")

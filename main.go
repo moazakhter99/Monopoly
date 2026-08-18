@@ -68,12 +68,11 @@ func main() {
 	gameHub := service.CreateNewGameHub(logger.ZapLogger, MonopolyDB)
 	wsHandler := handler.NewWsGameController(gameHub)
 	r.HandleFunc("/oldws", wsHandler.WSHandler)
-	// go run(gameHub)
 
-	client := gameroom.CreateOtherClinet(wsRouter)
 	gameRoom := gameroom.CreateGameRoom(MonopolyDB)
-	clientHandler := handler.CreateClientController(client, gameRoom)
+	clientHandler := handler.CreateClientController(gameRoom, wsRouter)
 	r.HandleFunc("/ws", clientHandler.ClientHandler)
+
 	go gamehub.Monopoly(MonopolyDB, wsRouter, gameRoom)
 
 	http.ListenAndServe(":"+port, r)
