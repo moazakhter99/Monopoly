@@ -48,9 +48,7 @@ func (game *HandleWsGameController) WSHandler(w http.ResponseWriter, r *http.Req
 		logger.ZapLogger.Errorw("WebSockert Upgrade", "'Error", err)
 		return
 	}
-	// defer conn.Close()
 	logger.ZapLogger.Infow("Request", "URI", r.RequestURI)
-	// playerId := r.Context().Value("playerId").(string)
     gameId := r.URL.Query().Get("gameId")
     playerId := r.URL.Query().Get("playerId")
 	gameLog := logger.ZapLogger.With(

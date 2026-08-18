@@ -3,6 +3,7 @@ package handler
 import (
 	gameroom "Monopoly/Gameroom"
 	"Monopoly/logger"
+	"Monopoly/router"
 
 	// "Monopoly/routes"
 	"net/http"
@@ -21,15 +22,15 @@ var cUpgrader = websocket.Upgrader{
 }
 
 type HandleClientController struct {
-	clientProc 	gameroom.ClinetProcessor
 	room 		gameroom.Room
+	r			router.Router
 
 }
 
-func CreateClientController(proc gameroom.ClinetProcessor, r gameroom.Room) *HandleClientController {
+func CreateClientController(r gameroom.Room, ro router.Router) *HandleClientController {
 	return &HandleClientController{
-		clientProc: proc,
 		room: r,
+		r: ro,
 	}
 }
 
@@ -51,13 +52,10 @@ func (cl *HandleClientController) ClientHandler(w http.ResponseWriter, r *http.R
     playerId := r.URL.Query().Get("playerId")
 	logger.ZapLogger.Infow("Request", "gameId", gameId, "playerId", playerId, "URI", r.RequestURI)
 
-	// Complete Registration
+	client := gameroom.CreateNewOtherClinet(cl.r, conn, cl.room, playerId, gameId)
 
-	player := cl.clientProc.UpgradeClinet(conn, playerId, gameId)
-	cl.room.AddPlayer(gameId, player)
-
-	go cl.clientProc.ReadMessage()
-	go cl.clientProc.WriteMessage()
+	go client.ReadMessage()
+	go client.WriteMessage()
 
 	logger.ZapLogger.Infoln("Exit Client Handler")
 }

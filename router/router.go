@@ -1,5 +1,6 @@
 package router
 
+// Update the Router Once Decided on what to do with the channel approch
 type Router interface {
 	HandleFunc(path string, f func(Request, chan []byte)) *Route
 	router(req Request, readChan chan []byte)

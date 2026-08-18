@@ -9,6 +9,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type ClinetProcessor interface {
+	ReadMessage()
+	WriteMessage()
+}
+
 type NewClient struct {
 	PlayerId  string
 	GameId    string
@@ -17,37 +22,29 @@ type NewClient struct {
 	Conn      *websocket.Conn
 	Server    router.GpServer
 	ConnClose func()
+	room      Room
 }
 
-type ClinetProcessor interface {
-	// UpgradeClinet(playerId string, conn *websocket.Conn, logger *zap.SugaredLogger)
-	ReadMessage()
-	WriteMessage()
-	UpgradeClinet(conn *websocket.Conn, PlayerId, GameId string) *NewClient
-}
-
-func CreateOtherClinet(r router.Router) *NewClient {
+func CreateNewOtherClinet(r router.Router, conn *websocket.Conn, room Room, playerId, gameId string) *NewClient {
 	s := router.NewServer(r)
-	return &NewClient{
+	c := &NewClient{
 		ReadMsg:  make(chan []byte),
 		WriteMsg: make(chan []byte),
-		// Conn: conn,
-		Server: s,
+		Conn:     conn,
+		Server:   s,
+		PlayerId: playerId,
+		GameId:   gameId,
+		room:     room,
 	}
-}
-
-func (c *NewClient) UpgradeClinet(conn *websocket.Conn, playerId, gameId string) *NewClient {
-	c.Conn = conn
-	c.PlayerId = playerId
-	c.GameId = gameId
+	c.room.AddPlayer(gameId, c)
 	return c
 }
 
 func (c *NewClient) ReadMessage() {
-	logger.ZapLogger.Infoln("Enter Read WS Message ")
+	logger.ZapLogger.Infoln("Enter Reading WS Message for ", c.PlayerId)
 	defer func() {
-		// Complete deregister
-		// c.Conn.Close()
+		c.room.RemovePlayer(c.PlayerId, c.GameId)
+		c.Conn.Close()
 	}()
 
 	for {
@@ -63,16 +60,11 @@ func (c *NewClient) ReadMessage() {
 			break
 		}
 
-		clientDetail := models.Client{
-			PlayerId: c.PlayerId,
-			GameId:   "",
-		}
-		message.Client = &clientDetail
 		logger.ZapLogger.Infow("Read", "Msg", message)
 		ReqParam["Player"] = c.PlayerId
 		ReqParam["Game"] = c.GameId
 
-		err = c.Server.Write(message.Type, message.Payload, ReqParam, c.ReadMsg)
+		err = c.Server.Write(message.Type, message.Payload, ReqParam, nil)
 		if err != nil {
 			// Write this error
 			logger.ZapLogger.Errorw("WS Message Router", "Error", err)
@@ -80,20 +72,33 @@ func (c *NewClient) ReadMessage() {
 		}
 
 	}
-	logger.ZapLogger.Infoln("Exit Read WS Message")
+	logger.ZapLogger.Infoln("Exit Reading WS Message")
 
 }
 
 func (c *NewClient) WriteMessage() {
-	logger.ZapLogger.Infoln("Enter Write WS Message ")
+	logger.ZapLogger.Infoln("Enter Writing WS Message for ", c.PlayerId)
 	defer func() {
-		// Complete deregister
-		// c.Conn.Close()
+		c.room.RemovePlayer(c.PlayerId, c.GameId)
+		c.Conn.Close()
 	}()
 
 	for {
 		var message models.WSMessage
-		msgByte := c.Server.Read()
+		msgByte, ok := <-c.WriteMsg
+		if !ok {
+			wsError := models.WsError{
+				Message: "Error While Reding Response",
+				WsError: websocket.CloseMessage,
+			}
+			err := c.Conn.WriteJSON(wsError)
+			if err != nil {
+				// Write this error
+				break
+			}
+			return
+		}
+
 		logger.ZapLogger.Infoln("Write Msg: ", string(msgByte))
 		err := json.Unmarshal(msgByte, &message)
 		if err != nil {
@@ -108,7 +113,6 @@ func (c *NewClient) WriteMessage() {
 			}
 			return
 		}
-		logger.ZapLogger.Infoln("Write Msg: ", message)
 		if err := c.Conn.WriteJSON(message); err != nil {
 			logger.ZapLogger.Errorw("Chan Write Message", "Error", err)
 		}

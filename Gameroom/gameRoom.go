@@ -2,6 +2,7 @@ package gameroom
 
 import (
 	db "Monopoly/DB"
+	"Monopoly/logger"
 	"sync"
 )
 
@@ -10,6 +11,8 @@ type Room interface {
 	RemovePlayer(playerId, gameId string)
 	UpdateGameState(gameId, playerId, state string)
 	Flush()
+	flush()
+	GetClientListByGame(gameId string) (clientMap ClientMap)
 }
 
 type ClientMap map[string]*NewClient
@@ -20,7 +23,6 @@ type GameRoom struct {
 	GameState     map[string][2]string
 	Games         []string        // Game List
 	PlayerMap     map[string]bool // PlayerId Map
-	ClientMap     ClientMap       // Client Map
 	GamePlayerMap map[string]ClientMap
 	db            db.DbOperations
 	mut           sync.Mutex
@@ -31,7 +33,6 @@ func CreateGameRoom(db db.DbOperations) *GameRoom {
 		GameMap:       make(map[string]bool),
 		GameState:     make(map[string][2]string),
 		PlayerMap:     make(map[string]bool),
-		ClientMap:     make(map[string]*NewClient),
 		GamePlayerMap: make(map[string]ClientMap, 6),
 		db: db,
 	}
@@ -49,11 +50,14 @@ func (r *GameRoom) AddPlayer(gameId string, client *NewClient) {
 
 	if !r.PlayerMap[client.PlayerId] {
 		r.PlayerMap[client.PlayerId] = true
-		r.ClientMap[client.PlayerId] = client
+		if r.GamePlayerMap[gameId] == nil {
+			r.GamePlayerMap[gameId] = make(ClientMap)
+		}
 		r.GamePlayerMap[gameId][client.PlayerId] = client
 		r.GameState[gameId] = [2]string{
 			client.PlayerId, "Added",
 		}
+		logger.ZapLogger.Infow("State Update", "GameId", gameId, "PlayerId", client.PlayerId, "Updated State", "Added")
 	}
 }
 
@@ -62,17 +66,18 @@ func (r *GameRoom) RemovePlayer(playerId, gameId string) {
 	r.mut.Lock()
 	defer r.mut.Unlock()
 
-	r.Flush()
+	r.flush()
 	if r.PlayerMap[playerId] {
-		delete(r.ClientMap, playerId)
 		delete(r.GamePlayerMap[gameId], playerId)
 		delete(r.PlayerMap, playerId)
+		logger.ZapLogger.Infow("Remove Player", "PlayerId", playerId, "Player left", len(r.GamePlayerMap[gameId]))
 	}
 
-	if len(r.GamePlayerMap) == 0 {
+	if len(r.GamePlayerMap[gameId]) == 0 {
 		delete(r.GameMap, gameId)
 		delete(r.GameState, gameId)
 		delete(r.GamePlayerMap, gameId)
+		logger.ZapLogger.Infow("Drop Game", "GameId", gameId)
 	}
 
 }
@@ -83,59 +88,19 @@ func (r *GameRoom) UpdateGameState(gameId, playerId, state string) {
 	r.GameState[gameId] = [2]string{
 		playerId, state,
 	}
+	logger.ZapLogger.Infow("State Update", "GameId", gameId, "PlayerId", playerId, "Updated State", state)
 }
 
 func (r *GameRoom) Flush() {
+	r.mut.Lock()
+	defer r.mut.Unlock()
+	r.flush()
+}
+
+func (r *GameRoom) flush() {
 	// Write all the info to db
 }
 
-// func removeFromList(list []string, value string) []string {
-// 	for i, v := range list {
-// 		if v == value {
-// 			return append(list[:i], list[i+1:]...)
-// 		}
-// 	}
-// 	return list
-// }
-// // Create New Room
-// func (r *GameRoom) CreateNewGame(gameId string) {
-// 	r.mut.Lock()
-// 	defer r.mut.Unlock()
-// 	if r.GameMap[""] {}
-// 	if !r.GameExists(gameId) {
-// 		r.GameMap[gameId] = true
-// 		r.Games = append(r.Games, gameId)
-// 		// r.GamePlayerMap[gameId] = make(map[string]*NewClient)
-
-// 	}
-
-// }
-
-// // Check existing room
-// func (r *GameRoom) GameExists(gameId string) bool {
-// 	_, ok := r.GameMap[gameId]
-// 	return ok
-// }
-
-// // Get Room
-
-// // Remove Room
-// func (r *GameRoom) RemoveRoom(gameId string) {
-// 	r.mut.Lock()
-// 	defer r.mut.Unlock()
-// 	delete(r.GameMap, gameId)
-// 	delete(r.GamePlayerMap, gameId)
-// 	r.Games = removeFromList(r.Games, gameId)
-
-// }
-
-// // Check Existing Player
-// func (r *GameRoom) PlayerExists(playerId string) bool {
-// 	_, ok := r.PlayerMap[playerId]
-// 	return ok
-// }
-
-// // Get Player List
-// func (r *GameRoom) PlayerList(gameId string) (playerList []string) {
-// 	return //r.GamePlayerMap[gameId]
-// }
+func (r *GameRoom) GetClientListByGame(gameId string) (clientMap ClientMap) {
+	return r.GamePlayerMap[gameId]
+}

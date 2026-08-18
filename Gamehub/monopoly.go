@@ -13,10 +13,10 @@ import (
 
 
 
-func Monopoly(db db.DbOperations, r router.Route, gr *gameroom.GameRoom) {
+func Monopoly(db db.DbOperations, r router.Route, gr gameroom.Room) {
 
 	rollDice := gameplay.CreateRollDice(db, gr)
-	rollDiceCont := handler.CreateHubContoller(rollDice, gr)
+	rollDiceCont := handler.CreateHubContoller(rollDice)
 	r.HandleFunc(models.ROLLDICE, rollDiceCont.HandleHub)
 
 
