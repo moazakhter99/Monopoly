@@ -26,13 +26,14 @@ type GameRoom struct {
 	mut           sync.Mutex
 }
 
-func CreateGameRoom() *GameRoom {
+func CreateGameRoom(db db.DbOperations) *GameRoom {
 	return &GameRoom{
 		GameMap:       make(map[string]bool),
 		GameState:     make(map[string][2]string),
 		PlayerMap:     make(map[string]bool),
 		ClientMap:     make(map[string]*NewClient),
 		GamePlayerMap: make(map[string]ClientMap, 6),
+		db: db,
 	}
 }
 
