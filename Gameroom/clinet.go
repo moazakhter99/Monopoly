@@ -27,7 +27,7 @@ type NewClient struct {
 
 func CreateNewOtherClinet(r router.Router, conn *websocket.Conn, room Room, playerId, gameId string) *NewClient {
 	s := router.NewServer(r)
-	c := &NewClient{
+	c := NewClient{
 		ReadMsg:  make(chan []byte),
 		WriteMsg: make(chan []byte),
 		Conn:     conn,
@@ -37,7 +37,7 @@ func CreateNewOtherClinet(r router.Router, conn *websocket.Conn, room Room, play
 		room:     room,
 	}
 	c.room.AddPlayer(gameId, c)
-	return c
+	return &c
 }
 
 func (c *NewClient) ReadMessage() {
