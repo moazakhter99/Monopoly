@@ -108,7 +108,7 @@ func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]strin
 		
 	}()
 
-	for key, client := range clientList {
+	for _, client := range clientList {
 		client.WriteMsg <- wsResp
 	}
 
