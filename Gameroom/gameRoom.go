@@ -7,7 +7,7 @@ import (
 )
 
 type Room interface {
-	AddPlayer(gameId string, client *NewClient)
+	AddPlayer(gameId string, client NewClient)
 	RemovePlayer(playerId, gameId string)
 	UpdateGameState(gameId, playerId, state string)
 	Flush()
@@ -39,7 +39,7 @@ func CreateGameRoom(db db.DbOperations) *GameRoom {
 }
 
 // Add New Player
-func (r *GameRoom) AddPlayer(gameId string, client *NewClient) {
+func (r *GameRoom) AddPlayer(gameId string, client NewClient) {
 	r.mut.Lock()
 	defer r.mut.Unlock()
 
@@ -53,7 +53,7 @@ func (r *GameRoom) AddPlayer(gameId string, client *NewClient) {
 		if r.GamePlayerMap[gameId] == nil {
 			r.GamePlayerMap[gameId] = make(ClientMap)
 		}
-		r.GamePlayerMap[gameId][client.PlayerId] = client
+		r.GamePlayerMap[gameId][client.PlayerId] = &client
 		r.GameState[gameId] = [2]string{
 			client.PlayerId, "Added",
 		}

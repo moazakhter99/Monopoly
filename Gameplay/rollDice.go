@@ -48,7 +48,7 @@ func (g *RollDiceProc) Play(payload any, param map[string]string) (targetMap map
 	response := models.RespDiceRoll{
 		DiceVal: diceVal,
 	}
-	logger.ZapLogger.Infow(models.ROLLDICE, "Dice Value", diceVal)
+	logger.ZapLogger.Infow(models.ROLLDICE, "Game", gameId, "Player", playerId, "Dice Value", diceVal)
 
 	targetMap[""] = response
 	g.room.UpdateGameState(gameId, playerId, models.ROLLDICE)
@@ -60,7 +60,9 @@ func (g *RollDiceProc) Play(payload any, param map[string]string) (targetMap map
 func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]string, readChan chan []byte) (err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Response")
 
-	clientList := g.room.GetClientListByGame(param["Game"])
+	gameId := param["Game"]
+	playerId := param["Player"]
+	clientList := g.room.GetClientListByGame(gameId)
 	respMsg := targetMap[""]
 	resp, err := json.Marshal(respMsg)
 	if err != nil {
@@ -68,6 +70,7 @@ func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]strin
 		return
 	}
 
+	logger.ZapLogger.Infow(models.ROLLDICE, "Game", gameId, "Clinet Count", len(clientList))
 	wsMessage := models.WSMessage{
 		Type: models.ROLLDICE,
 		Payload: resp,
@@ -82,9 +85,9 @@ func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]strin
 	go func() {
 		
 		diceValResp := respMsg.(models.RespDiceRoll)
-		cl, ok := clientList[param["Player"]]
+		cl, ok := clientList[playerId]
 		if !ok {
-			logger.ZapLogger.Errorf("Client Not Found: %v", param["Player"])
+			logger.ZapLogger.Errorf("Client Not Found: %v", playerId)
 			return
 		} 
 
@@ -105,7 +108,7 @@ func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]strin
 		
 	}()
 
-	for _, client := range clientList {
+	for key, client := range clientList {
 		client.WriteMsg <- wsResp
 	}
 
