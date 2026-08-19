@@ -36,8 +36,8 @@ func (g *RollDiceProc) Validate(reqMsg []byte) (payload any, err error) {
 func (g *RollDiceProc) Play(payload any, param map[string]string) (targetMap map[string]any, err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Player")
 	var diceVal int
-	targetMap = make(map[string]any)
 	req := payload.(models.ReqRolDice)
+	targetMap = make(map[string]any, 1)
 	gameId := param["Game"]
 	playerId := param["Player"]
 

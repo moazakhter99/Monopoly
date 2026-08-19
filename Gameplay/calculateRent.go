@@ -2,24 +2,22 @@ package gameplay
 
 import (
 	db "Monopoly/DB"
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
 	"strconv"
 )
 
-
-
 type CalculateRentProc struct {
-	db 		db.DbOperations
-	client 	*models.Client
-	writeCh chan<- models.WSMessage
-
+	db   db.DbOperations
+	room gameroom.Room
 }
 
-func CreateCalculateRent(db db.DbOperations) *CalculateRentProc {
+func CreateCalculateRent(db db.DbOperations, room gameroom.Room) *CalculateRentProc {
 	return &CalculateRentProc{
-		db: db,
+		db:   db,
+		room: room,
 	}
 }
 
@@ -36,15 +34,15 @@ func (c *CalculateRentProc) Validate(reqMsg []byte) (payload any, err error) {
 }
 
 // Might not work as the resposens are targeted
-func (c *CalculateRentProc) Play(payload any) ([]byte, error) {
+func (c *CalculateRentProc) Play(payload any, param map[string]string) (map[string]any, error) {
 	logger.ZapLogger.Infoln("Enter Play Calculate Rent")
 	req := payload.(models.ReqCalculateRent)
 	var rent int
 	var err error
-	targetMap := make(map[string][]byte, 2)
+	targetMap := make(map[string]any, 2)
 
-	playerId := c.client.PlayerId
-	gameId := c.client.GameId
+	gameId := param["Game"]
+	playerId := param["Player"]
 	baseRent := req.Price * 10 / 100
 
 	logger.ZapLogger.Infoln(models.CALCULATERENT, "Calculating Rent")
@@ -81,40 +79,34 @@ func (c *CalculateRentProc) Play(payload any) ([]byte, error) {
 	}
 
 	playerResp := models.RespCalculateRent{
-		BlockId: req.BlockId,
+		BlockId:   req.BlockId,
 		BlockType: req.BlockType,
-		OwnerId: req.OwnerId,
-		RenterId: playerId,
-		Rent: rent,
+		OwnerId:   req.OwnerId,
+		RenterId:  playerId,
+		Rent:      rent,
 	}
 
-	playerResponse, err := json.Marshal(playerResp)
-	if err != nil {
-		logger.ZapLogger.Infow(models.CALCULATERENT, "Resp for", playerId, "JSON err", err)
-		return nil, err
-	}
+	logger.ZapLogger.Infow(models.CALCULATERENT, "Client", playerId, "Resp Body", playerResp)
 
-	logger.ZapLogger.Infow(models.CALCULATERENT, "Client", playerId, "Resp Body", string(playerResponse))
-
-	targetMap[playerId] = playerResponse
+	targetMap[playerId] = playerResp
 
 	ownerResp := models.RespCalculateRent{
-		BlockId: req.BlockId,
+		BlockId:   req.BlockId,
 		BlockType: req.BlockType,
-		RenterId: playerId,
-		OwnerId: req.OwnerId,
-		Rent: rent,
+		RenterId:  playerId,
+		OwnerId:   req.OwnerId,
+		Rent:      rent,
 	}
 
-	ownerResponse, err := json.Marshal(ownerResp)
-	if err != nil {
-		logger.ZapLogger.Infow(models.CALCULATERENT, "Resp for", req.OwnerId, "JSON err", err)
-		return nil, err
-	}
-	logger.ZapLogger.Infow(models.CALCULATERENT, "Client", req.OwnerId, "Resp Body", string(ownerResponse))
+	logger.ZapLogger.Infow(models.CALCULATERENT, "Client", req.OwnerId, "Resp Body", ownerResp)
 
-	targetMap[req.OwnerId] = ownerResponse
+	targetMap[req.OwnerId] = ownerResp
 
 	logger.ZapLogger.Infoln("Exit Play Calculate Rent")
-	return playerResponse, nil
+	return targetMap, nil
+}
+
+// Response implements [Game].
+func (c *CalculateRentProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
+	panic("unimplemented")
 }

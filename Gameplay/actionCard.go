@@ -2,6 +2,7 @@ package gameplay
 
 import (
 	db "Monopoly/DB"
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
@@ -9,18 +10,15 @@ import (
 	"strconv"
 )
 
-
-
 type ActionCardProc struct {
-	db      db.DbOperations
-	client  *models.Client
-	writeCh chan<- models.WSMessage
-
+	db   db.DbOperations
+	room gameroom.Room
 }
 
-func CreateActionCard(db db.DbOperations) *ActionCardProc {
+func CreateActionCard(db db.DbOperations, room gameroom.Room) *ActionCardProc {
 	return &ActionCardProc{
-		db: db,
+		db:   db,
+		room: room,
 	}
 }
 
@@ -36,14 +34,15 @@ func (a *ActionCardProc) Validate(reqMsg []byte) (payload any, err error) {
 	return req, err
 }
 
-func (a *ActionCardProc) Play(payload any) ([]byte, error) {
+func (a *ActionCardProc) Play(payload any, param map[string]string) (map[string]any, error) {
 	logger.ZapLogger.Infoln("Enter Play Action Card")
 
 	var err error
-	playerId := a.client.PlayerId
-	gameId := a.client.GameId
+	gameId := param["Game"]
+	playerId := param["Player"]
 	inJail := false
 	req := payload.(models.ReqActionCard)
+	targetMap := make(map[string]any, 1)
 	blockType := req.Type
 
 	cash, pos, err := a.db.GetPlayerCashPos(playerId)
@@ -72,7 +71,7 @@ func (a *ActionCardProc) Play(payload any) ([]byte, error) {
 		logger.ZapLogger.Infow(models.ACTIONCARD, "Update Cash", chestValue)
 
 	case models.CHANCE:
-	
+
 		action, err := a.db.GetCardAction(req.CardId)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
@@ -199,17 +198,19 @@ func (a *ActionCardProc) Play(payload any) ([]byte, error) {
 	// }
 
 	response := models.RespActionCard{
-		Cash: cash,
-		Pos: pos,
+		Cash:   cash,
+		Pos:    pos,
 		InJail: inJail,
 	}
 
-	resp, err := json.Marshal(response)
-	if err != nil {
-		logger.ZapLogger.Errorw(models.ROLLDICE, "JSON Error", err)
-		return nil, err
-	}
+	targetMap[""] = response
+	a.room.UpdateGameState(gameId, playerId, models.ROLLDICE)
 
 	logger.ZapLogger.Infoln("Exit Play Action Card")
-	return resp, nil
+	return targetMap, nil
+}
+
+// Response implements [Game].
+func (a *ActionCardProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
+	panic("unimplemented")
 }

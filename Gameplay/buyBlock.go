@@ -2,20 +2,21 @@ package gameplay
 
 import (
 	db "Monopoly/DB"
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
 )
 
 type BuyBlockProc struct {
-	db      db.DbOperations
-	client  *models.Client
-	writeCh chan<- models.WSMessage
+	db   db.DbOperations
+	room gameroom.Room
 }
 
-func CreateBuyBlock(db db.DbOperations) *BuyBlockProc {
+func CreateBuyBlock(db db.DbOperations, room gameroom.Room) *BuyBlockProc {
 	return &BuyBlockProc{
-		db: db,
+		db:   db,
+		room: room,
 	}
 }
 
@@ -31,14 +32,15 @@ func (b *BuyBlockProc) Validate(reqMsg []byte) (payload any, err error) {
 	return req, err
 }
 
-func (b *BuyBlockProc) Play(payload any) (resp []byte, err error) {
+func (b *BuyBlockProc) Play(payload any, param map[string]string) (targetMap map[string]any, err error) {
 	logger.ZapLogger.Infoln("Enter Play Buy Block")
 	var updatedCash int
 	var buy bool
 	req := payload.(models.ReqBuyBlock)
+	targetMap = make(map[string]any, 2)
 
-	playerId := ""
-	gameId := ""
+	gameId := param["Game"]
+	playerId := param["Player"]
 	buy = false
 
 	cash, pos, err := b.db.GetPlayerCashPos(playerId)
@@ -74,9 +76,9 @@ func (b *BuyBlockProc) Play(payload any) (resp []byte, err error) {
 
 	logger.ZapLogger.Infow(models.BUYBLOCK, "Game Id", gameId, "Player Id", playerId, "Block Id", req.BlockId)
 	response := models.RespBuyBlock{
-		BlockId:  req.BlockId,
-		Buy:      buy,
-		Cash:     updatedCash,
+		BlockId: req.BlockId,
+		Buy:     buy,
+		Cash:    updatedCash,
 	}
 
 	err = b.db.UpdatePlayerCash(playerId, updatedCash, pos)
@@ -85,12 +87,14 @@ func (b *BuyBlockProc) Play(payload any) (resp []byte, err error) {
 		return
 	}
 
-	resp, err = json.Marshal(response)
-	if err != nil {
-		logger.ZapLogger.Errorw("JSON Error", "Error", err)
-		return
-	}
+	targetMap[""] = response
+	b.room.UpdateGameState(gameId, playerId, models.BUYBLOCK)
 
 	logger.ZapLogger.Infoln("Exit Play Buy Block")
 	return
+}
+
+// Response implements [Game].
+func (b *BuyBlockProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
+	panic("unimplemented")
 }

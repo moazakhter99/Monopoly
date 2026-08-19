@@ -2,6 +2,7 @@ package gameplay
 
 import (
 	db "Monopoly/DB"
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
@@ -9,14 +10,14 @@ import (
 )
 
 type MovePosProc struct {
-	db      db.DbOperations
-	client  *models.Client
-	writeCh chan<- models.WSMessage
+	db   db.DbOperations
+	room gameroom.Room
 }
 
-func CreateMovePos(db db.DbOperations) *MovePosProc {
+func CreateMovePos(db db.DbOperations, room gameroom.Room) *MovePosProc {
 	return &MovePosProc{
-		db: db,
+		db:   db,
+		room: room,
 	}
 }
 
@@ -32,13 +33,14 @@ func (m *MovePosProc) Validate(reqMsg []byte) (payload any, err error) {
 	return req, err
 }
 
-func (m *MovePosProc) Play(payload any) (resp []byte, err error) {
+func (m *MovePosProc) Play(payload any, param map[string]string) (targetMap map[string]any, err error) {
 	logger.ZapLogger.Infoln("Enter Play Move Pos")
 	var response models.RespMovePos
 	req := payload.(models.ReqMovePos)
+	targetMap = make(map[string]any, 2)
 
-	playerId := ""
-	gameId := ""
+	gameId := param["Game"]
+	playerId := param["Player"]
 
 	cash, pos, err := m.db.GetPlayerCashPos(playerId)
 	if err != nil {
@@ -67,9 +69,9 @@ func (m *MovePosProc) Play(payload any) (resp []byte, err error) {
 		if block.Type == models.SPECIALCARD {
 			var status string
 			response = models.RespMovePos{
-				BlockId:  block.BlockId,
-				NewPos:   newPos,
-				Type:     block.Type,
+				BlockId:   block.BlockId,
+				NewPos:    newPos,
+				Type:      block.Type,
 				BlockName: block.BlockName,
 			}
 			if block.BlockName == models.COMMUNITYCHEST || block.BlockName == models.CHANCE {
@@ -89,24 +91,26 @@ func (m *MovePosProc) Play(payload any) (resp []byte, err error) {
 				logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
 				return
 			}
-			// go callActionCard(client, readCh)
 
 		} else {
 			response = models.RespMovePos{
-				BlockId:  block.BlockId,
-				NewPos:   newPos,
-				Type:     block.Type,
+				BlockId: block.BlockId,
+				NewPos:  newPos,
+				Type:    block.Type,
 			}
 
 		}
 	}
 
-	resp, err = json.Marshal(response)
-	if err != nil {
-		logger.ZapLogger.Errorw("JSON Error", "Error", err)
-		return
-	}
+	targetMap[""] = response
+	m.room.UpdateGameState(gameId, playerId, models.ROLLDICE)
 
 	logger.ZapLogger.Infoln("Exit Play Move Pos")
 	return
+}
+
+// Response implements [Game].
+func (m *MovePosProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
+			// go callActionCard(client, readCh)
+	panic("unimplemented")
 }

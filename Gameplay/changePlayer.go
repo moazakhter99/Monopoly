@@ -2,23 +2,21 @@ package gameplay
 
 import (
 	db "Monopoly/DB"
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
 )
 
-
-
 type ChangePlayerProc struct {
-	db 		db.DbOperations
-	client 	*models.Client
-	writeCh chan<- models.WSMessage
-
+	db   db.DbOperations
+	room gameroom.Room
 }
 
-func CreateChangePlayer(db db.DbOperations) *ChangePlayerProc {
+func CreateChangePlayer(db db.DbOperations, room gameroom.Room) *ChangePlayerProc {
 	return &ChangePlayerProc{
-		db: db,
+		db:   db,
+		room: room,
 	}
 }
 
@@ -35,13 +33,13 @@ func (c *ChangePlayerProc) Validate(reqMsg []byte) (payload any, err error) {
 }
 
 // Might not work as the resposens are targeted
-func (c *ChangePlayerProc) Play(payload any) (resp []byte, err error) {
+func (c *ChangePlayerProc) Play(payload any, param map[string]string) (targetMap map[string]any, err error) {
 	logger.ZapLogger.Infoln("Enter Play Change Player")
 	// req := payload.(models.Request)
-	targetMap := make(map[string][]byte, 2)
 
-	playerId := c.client.PlayerId
-	gameId := c.client.GameId
+	gameId := param["Game"]
+	playerId := param["Player"]
+	targetMap = make(map[string]any, 2)
 
 	seq, count, err := c.db.GetPlayerSeqAndCount(playerId)
 	if err != nil {
@@ -57,7 +55,7 @@ func (c *ChangePlayerProc) Play(payload any) (resp []byte, err error) {
 
 	nextPlayer := models.RespChangePlayer{
 		NextPlayer: nextPlayerId,
-		Playing: true,
+		Playing:    true,
 	}
 	nextResp, err := json.Marshal(nextPlayer)
 	if err != nil {
@@ -68,7 +66,7 @@ func (c *ChangePlayerProc) Play(payload any) (resp []byte, err error) {
 
 	currPlayer := models.RespChangePlayer{
 		NextPlayer: nextPlayerId,
-		Playing: false,
+		Playing:    false,
 	}
 	currResp, err := json.Marshal(currPlayer)
 	if err != nil {
@@ -77,7 +75,11 @@ func (c *ChangePlayerProc) Play(payload any) (resp []byte, err error) {
 	}
 	targetMap[playerId] = currResp
 
-
 	logger.ZapLogger.Infoln("Exit Play Change Player")
 	return
+}
+
+// Response implements [Game].
+func (c *ChangePlayerProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
+	panic("unimplemented")
 }

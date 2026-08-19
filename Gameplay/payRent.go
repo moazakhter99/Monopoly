@@ -2,6 +2,7 @@ package gameplay
 
 import (
 	db "Monopoly/DB"
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
@@ -9,18 +10,15 @@ import (
 	"strings"
 )
 
-
-
 type PayRentProc struct {
-	db 		db.DbOperations
-	client 	*models.Client
-	writeCh chan<- models.WSMessage
-
+	db   db.DbOperations
+	room gameroom.Room
 }
 
-func CreatePayRent(db db.DbOperations) *PayRentProc {
+func CreatePayRent(db db.DbOperations, room gameroom.Room) *PayRentProc {
 	return &PayRentProc{
-		db: db,
+		db:   db,
+		room: room,
 	}
 }
 
@@ -36,13 +34,13 @@ func (p *PayRentProc) Validate(reqMsg []byte) (payload any, err error) {
 	return req, err
 }
 
-func (p *PayRentProc) Play(payload any) (resp []byte, err error) {
+func (p *PayRentProc) Play(payload any, param map[string]string) (targetMap map[string]any, err error) {
 	logger.ZapLogger.Infoln("Enter Play Pay Rent")
 	// req := payload.(models.ReqPayRent)
-	targetMap := make(map[string][]byte, 2)
 
-	playerId := p.client.PlayerId
-	gameId := p.client.GameId
+	gameId := param["Game"]
+	playerId := param["Player"]
+	targetMap = make(map[string]any, 2)
 
 	status, err := p.db.GetPlayerStatus(playerId, gameId)
 	if err != nil {
@@ -88,35 +86,29 @@ func (p *PayRentProc) Play(payload any) (resp []byte, err error) {
 	}
 
 	playerResp := models.RespPayRent{
-		Cash: updatedPlayerCash,
-		Paid: true,
-		Rent: rent,
+		Cash:    updatedPlayerCash,
+		Paid:    true,
+		Rent:    rent,
 		OwnerId: ownerId,
 	}
-
-	PlayerResponse, err := json.Marshal(playerResp)
-	if err != nil {
-		logger.ZapLogger.Infow(models.PAYRENT, "Resp for", playerId, "State", models.PAYRENT, "JSON err", err)
-		return
-	}
-	targetMap[playerId] = PlayerResponse
+	targetMap[playerId] = playerResp
 
 	ownerResp := models.RespPayRent{
-		Cash: updatedOwnerCash,
-		Paid: true,
-		Rent: rent,
+		Cash:     updatedOwnerCash,
+		Paid:     true,
+		Rent:     rent,
 		RenterId: playerId,
 	}
+	targetMap[ownerId] = ownerResp
 
-	ownerResponse, err := json.Marshal(ownerResp)
-	if err != nil {
-		logger.ZapLogger.Infow(models.PAYRENT, "Resp for", ownerId, "State", models.PAYRENT, "JSON err", err)
-		return
-	}
-	targetMap[ownerId] = ownerResponse
-
-	// go callChangePlayer(client, readCh)
+	p.room.UpdateGameState(gameId, playerId, models.PAYRENT)
 
 	logger.ZapLogger.Infoln("Exit Play Pay Rent")
 	return
+}
+
+// Response implements [Game].
+func (p *PayRentProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
+	// go callChangePlayer(client, readCh)
+	panic("unimplemented")
 }

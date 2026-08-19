@@ -2,23 +2,21 @@ package gameplay
 
 import (
 	db "Monopoly/DB"
+	gameroom "Monopoly/Gameroom"
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
 )
 
-
-
 type JailProc struct {
-	db      db.DbOperations
-	client  *models.Client
-	writeCh chan<- models.WSMessage
-
+	db   db.DbOperations
+	room gameroom.Room
 }
 
-func CreateJail(db db.DbOperations) *JailProc {
+func CreateJail(db db.DbOperations, room gameroom.Room) *JailProc {
 	return &JailProc{
-		db: db,
+		db:   db,
+		room: room,
 	}
 }
 
@@ -34,14 +32,15 @@ func (j *JailProc) Validate(reqMsg []byte) (payload any, err error) {
 	return req, err
 }
 
-func (j *JailProc) Play(payload any) (resp []byte, err error) {
+func (j *JailProc) Play(payload any, param map[string]string) (targetMap map[string]any, err error) {
 	logger.ZapLogger.Infoln("Enter Jail Play")
 	req := payload.(models.ReqJail)
+	targetMap = make(map[string]any, 2)
 	var updatedCash int
 	var inJail bool
 
-	playerId := j.client.PlayerId
-	gameId := j.client.GameId
+	gameId := param["Game"]
+	playerId := param["Player"]
 
 	if !req.InJail {
 		return
@@ -93,20 +92,21 @@ func (j *JailProc) Play(payload any) (resp []byte, err error) {
 		updatedCash = cash
 
 	}
-	
+
 	response := models.RespJail{
-		Cash: updatedCash,
+		Cash:   updatedCash,
 		InJail: inJail,
 	}
 
-	// go callChangePlayer(client, readCh)
-
-	resp, err = json.Marshal(response)
-	if err != nil {
-		logger.ZapLogger.Errorw(models.JAIL, "JSON Error", err)
-		return
-	}
+	targetMap[""] = response
+	j.room.UpdateGameState(gameId, playerId, models.ROLLDICE)
 
 	logger.ZapLogger.Infoln("Exit Jail Play")
 	return
+}
+
+// Response implements [Game].
+func (j *JailProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
+	// go callChangePlayer(client, readCh)
+	panic("unimplemented")
 }
