@@ -57,11 +57,11 @@ func (g *RollDiceProc) Play(payload any, param map[string]string) (targetMap map
 	return
 }
 
-func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]string, readChan chan []byte) (err error) {
+func (g *RollDiceProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Response")
 
-	gameId := param["Game"]
-	playerId := param["Player"]
+	gameId := reqParam["Game"]
+	playerId := reqParam["Player"]
 	clientList := g.room.GetClientListByGame(gameId)
 	respMsg := targetMap[""]
 	resp, err := json.Marshal(respMsg)
@@ -101,7 +101,7 @@ func (g *RollDiceProc) Response(targetMap map[string]any, param map[string]strin
 			return
 		}
 
-		err = cl.Server.Write(models.MOVEPOS, req, param, readChan)
+		err = cl.Server.Write(models.MOVEPOS, req, reqParam, readChan)
 		if err != nil {
 			logger.ZapLogger.Errorw("WS Message Router", "Error", err)
 		}

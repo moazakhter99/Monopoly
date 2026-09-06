@@ -76,15 +76,8 @@ func (m *MovePosProc) Play(payload any, param map[string]string) (targetMap map[
 			}
 			if block.BlockName == models.COMMUNITYCHEST || block.BlockName == models.CHANCE {
 				response.CardNo = getCardNo()
-				// cardInfo, err := db.GetBlockInfo(block.BlockName, resp.CardNo)
-				// if err != nil {
-				// 	logger.ZapLogger.Errorw(models.MOVEPOS, "DB Error", err)
-				// 	return
-				// }
-				// resp.CardInfo = cardInfo
 				status = models.ACTIONCARD + "_" + strconv.Itoa(response.CardNo) + "_" + block.BlockName
 			}
-
 			status = models.ACTIONCARD + "_" + block.BlockName
 			err = m.db.UpdatePlayerStatus(playerId, status)
 			if err != nil {
@@ -100,10 +93,32 @@ func (m *MovePosProc) Play(payload any, param map[string]string) (targetMap map[
 			}
 
 		}
+
+	case playerId:
+		// Already owned by the player 
+		response = models.RespMovePos{
+			BlockId:  block.BlockId,
+			NewPos:   newPos,
+			State:    models.OWNED,
+			Type:     block.Type,
+			OwnerId:  playerId,
+		}
+		logger.ZapLogger.Infow(models.CHANGEPLAYER, "Current Player", playerId)
+
+	default:
+		// Pay rent
+		response = models.RespMovePos{
+			BlockId:  block.BlockId,
+			NewPos:   newPos,
+			State:    models.SOLD,
+			Type:     block.Type,
+			OwnerId:  block.OwnerId,
+			Price: block.Price,
+		}
 	}
 
 	targetMap[""] = response
-	m.room.UpdateGameState(gameId, playerId, models.ROLLDICE)
+	m.room.UpdateGameState(gameId, playerId, models.MOVEPOS)
 
 	logger.ZapLogger.Infoln("Exit Play Move Pos")
 	return
@@ -111,6 +126,79 @@ func (m *MovePosProc) Play(payload any, param map[string]string) (targetMap map[
 
 // Response implements [Game].
 func (m *MovePosProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
-			// go callActionCard(client, readCh)
-	panic("unimplemented")
+	logger.ZapLogger.Infoln("Enter Move Pos Response")
+
+	gameId := reqParam["Game"]
+	playerId := reqParam["Player"]
+	clientList := m.room.GetClientListByGame(gameId)
+	respMsg := targetMap[""]
+	resp, err := json.Marshal(respMsg)
+	if err != nil {
+		logger.ZapLogger.Errorw("JSON Error", "Error", err)
+		return
+	}
+
+	logger.ZapLogger.Infow(models.MOVEPOS, "Game", gameId, "Clinet Count", len(clientList))
+	wsMessage := models.WSMessage{
+		Type: models.ROLLDICE,
+		Payload: resp,
+	}
+
+	wsResp, err := json.Marshal(wsMessage)
+	if err != nil {
+		logger.ZapLogger.Errorw("JSON Error", "Error", err)
+		return
+	}
+
+	go func() {
+		movePosResp := respMsg.(models.RespMovePos)
+		cl, ok := clientList[playerId]
+		if !ok {
+			logger.ZapLogger.Errorf("Client Not Found: %v", playerId)
+			return
+		} 
+
+		ownerId := movePosResp.OwnerId
+		if playerId == "" {
+			return
+
+		} else if playerId == ownerId {
+			changePlayerReq := models.Request{}
+			req, err := json.Marshal(changePlayerReq)
+			if err != nil {
+				return
+			}
+
+			err = cl.Server.Write(models.CHANGEPLAYER, req, reqParam, readChan)
+			if err != nil {
+				logger.ZapLogger.Errorw("WS Message Router", "Error", err)
+			}
+
+		} else if playerId != ownerId {
+			calRentReq := &models.ReqCalculateRent{
+				BlockId: movePosResp.BlockId,
+				BlockType: movePosResp.Type,
+				Price: movePosResp.Price,
+				OwnerId: ownerId,
+			}
+			req, err := json.Marshal(calRentReq)
+			if err != nil {
+				logger.ZapLogger.Infow(models.MOVEPOS, "Json Error", err)
+				return
+			}
+
+			err = cl.Server.Write(models.CALCULATERENT, req, reqParam, readChan)
+			if err != nil {
+				logger.ZapLogger.Errorw("WS Message Router", "Error", err)
+			}
+		}
+	}()
+
+	for _, client := range clientList {
+		client.WriteMsg <- wsResp
+	}
+
+	logger.ZapLogger.Infoln("Exit Move Pos Response")
+	return
 }
+

@@ -35,7 +35,8 @@ type RespMovePos struct {
 	Type	string	`json:"type"`
 	OwnerId	string	`json:"owner_id"`
 	CardNo	int		`json:"card_no"`
-	CardInfo	string	`json:"card_info"`		
+	CardInfo	string	`json:"card_info"`
+	Price 		int	`json:"price"`		
 }
 
 type ReqBuyBlock struct {
