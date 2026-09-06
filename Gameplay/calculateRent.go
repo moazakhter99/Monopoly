@@ -108,5 +108,36 @@ func (c *CalculateRentProc) Play(payload any, param map[string]string) (map[stri
 
 // Response implements [Game].
 func (c *CalculateRentProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
-	panic("unimplemented")
+	logger.ZapLogger.Infoln("Enter Calculate Rent Response")
+
+	gameId := reqParam["Game"]
+	clientList := c.room.GetClientListByGame(gameId)
+
+	for id, respMsg := range targetMap {
+		client, ok := clientList[id]
+		if ok {
+			resp, err := json.Marshal(respMsg)
+			if err != nil {
+				logger.ZapLogger.Errorw("JSON Error", "Error", err)
+				return err
+			}
+			logger.ZapLogger.Infow(models.CALCULATERENT, "Game", gameId, "Clinet Count", len(clientList))
+			wsMessage := models.WSMessage{
+				Type: models.CALCULATERENT,
+				Payload: resp,
+			}
+
+			wsResp, err := json.Marshal(wsMessage)
+			if err != nil {
+				logger.ZapLogger.Errorw("JSON Error", "Error", err)
+				return err
+			}
+			client.WriteMsg <- wsResp
+
+		}
+	}
+
+
+	logger.ZapLogger.Infoln("Exit Calculate Rent Response")
+	return
 }
