@@ -109,6 +109,55 @@ func (p *PayRentProc) Play(payload any, param map[string]string) (targetMap map[
 
 // Response implements [Game].
 func (p *PayRentProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
-	// go callChangePlayer(client, readCh)
-	panic("unimplemented")
+	logger.ZapLogger.Infoln("Enter Pay Rent Response")
+
+	gameId := reqParam["Game"]
+	playerId := reqParam["Player"]
+	clientList := p.room.GetClientListByGame(gameId)
+
+	go func() {
+		cl, ok := clientList[playerId]
+		if ok {
+			changePlayerReq := models.Request{}
+			req, err := json.Marshal(changePlayerReq)
+			if err != nil {
+				return
+			}
+
+			err = cl.Server.Write(models.CHANGEPLAYER, req, reqParam, readChan)
+			if err != nil {
+				logger.ZapLogger.Errorw("WS Message Router", "Error", err)
+				return
+			}
+		}
+	}()
+
+	for id, respMsg := range targetMap {
+		client, ok := clientList[id]
+		if ok {
+			resp, err := json.Marshal(respMsg)
+			if err != nil {
+				logger.ZapLogger.Errorw("JSON Error", "Error", err)
+				return err
+			}
+			logger.ZapLogger.Infow(models.PAYRENT, "Game", gameId, "Clinet Count", len(clientList))
+			wsMessage := models.WSMessage{
+				Type: models.PAYRENT,
+				Payload: resp,
+			}
+
+			wsResp, err := json.Marshal(wsMessage)
+			if err != nil {
+				logger.ZapLogger.Errorw("JSON Error", "Error", err)
+				return err
+			}
+			client.WriteMsg <- wsResp
+
+		}
+	}
+
+
+
+	logger.ZapLogger.Infoln("Exit Pay Rent Response")
+	return
 }
