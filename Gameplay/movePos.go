@@ -159,7 +159,7 @@ func (m *MovePosProc) Response(targetMap map[string]any, reqParam map[string]str
 		} 
 
 		ownerId := movePosResp.OwnerId
-		if playerId == "" {
+		if ownerId == "" {
 			return
 
 		} else if playerId == ownerId {
