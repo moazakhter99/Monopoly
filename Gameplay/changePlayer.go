@@ -94,7 +94,7 @@ func (c *ChangePlayerProc) Response(targetMap map[string]any, reqParam map[strin
 				logger.ZapLogger.Errorw("JSON Error", "Error", err)
 				return err
 			}
-			logger.ZapLogger.Infow(models.MOVEPOS, "Game", gameId, "Clinet Count", len(clientList))
+			logger.ZapLogger.Infow(models.CHANGEPLAYER, "Game", gameId, "Clinet Count", len(clientList))
 			wsMessage := models.WSMessage{
 				Type: models.CHANGEPLAYER,
 				Payload: resp,
