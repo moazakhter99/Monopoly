@@ -212,5 +212,54 @@ func (a *ActionCardProc) Play(payload any, param map[string]string) (map[string]
 
 // Response implements [Game].
 func (a *ActionCardProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
-	panic("unimplemented")
+	logger.ZapLogger.Infoln("Enter Action Card Response")
+
+	gameId := reqParam["Game"]
+	playerId := reqParam["Player"]
+	clientList := a.room.GetClientListByGame(gameId)
+	respMsg := targetMap[""]
+	resp, err := json.Marshal(respMsg)
+	if err != nil {
+		logger.ZapLogger.Errorw("JSON Error", "Error", err)
+		return
+	}
+
+	logger.ZapLogger.Infow(models.ACTIONCARD, "Game", gameId, "Clinet Count", len(clientList))
+	wsMessage := models.WSMessage{
+		Type: models.ACTIONCARD,
+		Payload: resp,
+	}
+
+	wsResp, err := json.Marshal(wsMessage)
+	if err != nil {
+		logger.ZapLogger.Errorw("JSON Error", "Error", err)
+		return
+	}
+	
+	go func() {
+		actionCardReq := respMsg.(models.RespActionCard)
+		if !actionCardReq.InJail {
+			cl, ok := clientList[playerId]
+			if ok {
+				changePlayerReq := models.Request{}
+				req, err := json.Marshal(changePlayerReq)
+				if err != nil {
+					return
+				}
+
+				err = cl.Server.Write(models.CHANGEPLAYER, req, reqParam, readChan)
+				if err != nil {
+					logger.ZapLogger.Errorw("WS Message Router", "Error", err)
+					return
+				}
+			}
+		}
+	}()
+
+	for _, client := range clientList {
+		client.WriteMsg <- wsResp
+	}
+
+	logger.ZapLogger.Infoln("Exit Action Card Response")
+	return
 }
