@@ -140,7 +140,7 @@ func (m *MovePosProc) Response(targetMap map[string]any, reqParam map[string]str
 
 	logger.ZapLogger.Infow(models.MOVEPOS, "Game", gameId, "Clinet Count", len(clientList))
 	wsMessage := models.WSMessage{
-		Type: models.ROLLDICE,
+		Type: models.MOVEPOS,
 		Payload: resp,
 	}
 

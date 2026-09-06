@@ -81,5 +81,35 @@ func (c *ChangePlayerProc) Play(payload any, param map[string]string) (targetMap
 
 // Response implements [Game].
 func (c *ChangePlayerProc) Response(targetMap map[string]any, reqParam map[string]string, readChan chan []byte) (err error) {
-	panic("unimplemented")
+	logger.ZapLogger.Infoln("Enter Change Player Response")
+
+	gameId := reqParam["Game"]
+	clientList := c.room.GetClientListByGame(gameId)
+
+	for id, respMsg := range targetMap {
+		client, ok := clientList[id]
+		if ok {
+			resp, err := json.Marshal(respMsg)
+			if err != nil {
+				logger.ZapLogger.Errorw("JSON Error", "Error", err)
+				return err
+			}
+			logger.ZapLogger.Infow(models.MOVEPOS, "Game", gameId, "Clinet Count", len(clientList))
+			wsMessage := models.WSMessage{
+				Type: models.CHANGEPLAYER,
+				Payload: resp,
+			}
+
+			wsResp, err := json.Marshal(wsMessage)
+			if err != nil {
+				logger.ZapLogger.Errorw("JSON Error", "Error", err)
+				return err
+			}
+			client.WriteMsg <- wsResp
+
+		}
+	}
+
+	logger.ZapLogger.Infoln("Exit Change Player Response")
+	return
 }
