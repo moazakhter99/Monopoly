@@ -6,6 +6,7 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"errors"
 )
 
 type ChangePlayerProc struct {
@@ -20,7 +21,7 @@ func CreateChangePlayer(db db.DbOperations, room gameroom.Room) *ChangePlayerPro
 	}
 }
 
-func (c *ChangePlayerProc) Validate(reqMsg []byte) (payload any, err error) {
+func (c *ChangePlayerProc) Validate(reqMsg []byte, param map[string]string) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Validate Change Player")
 	var req models.Request
 	err = json.Unmarshal(reqMsg, &req)
@@ -28,6 +29,12 @@ func (c *ChangePlayerProc) Validate(reqMsg []byte) (payload any, err error) {
 		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "Validation Error", err)
 		return
 	}
+	if param["Player"] != c.room.GetCurrentPlayer(param["Game"]) {
+		logger.ZapLogger.Errorf("Player %v is not playing", param["Player"])
+		logger.ZapLogger.Infoln("Exit Validate Move Pos")
+		return nil, errors.New("Not Playing")
+	}
+
 	logger.ZapLogger.Infoln("Exit Validate Change Player")
 	return req, err
 }
@@ -46,34 +53,26 @@ func (c *ChangePlayerProc) Play(payload any, param map[string]string) (targetMap
 		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "DB Error", err)
 		return
 	}
-	logger.ZapLogger.Infow(models.CHANGEPLAYER, "CurrSeq", seq, "currCount", count)
+	logger.ZapLogger.Infow(models.CHANGEPLAYER, "Curr Player", playerId, "CurrSeq", seq, "currCount", count)
 	nextPlayerId, err := c.db.GetNextPlayer(gameId, nextSeq(seq, count))
 	if err != nil {
 		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "DB Error", err)
 		return
 	}
+	logger.ZapLogger.Infow(models.CHANGEPLAYER, "Next Player", nextPlayerId)
 
 	nextPlayer := models.RespChangePlayer{
 		NextPlayer: nextPlayerId,
 		Playing:    true,
 	}
-	nextResp, err := json.Marshal(nextPlayer)
-	if err != nil {
-		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "JSON Error", err)
-		return
-	}
-	targetMap[nextPlayerId] = nextResp
+	targetMap[nextPlayerId] = nextPlayer
 
 	currPlayer := models.RespChangePlayer{
 		NextPlayer: nextPlayerId,
 		Playing:    false,
 	}
-	currResp, err := json.Marshal(currPlayer)
-	if err != nil {
-		logger.ZapLogger.Errorw(models.CHANGEPLAYER, "JSON Error", err)
-		return
-	}
-	targetMap[playerId] = currResp
+	targetMap[playerId] = currPlayer
+	c.room.UpdateGameState(gameId, nextPlayerId, models.CHANGEPLAYER)
 
 	logger.ZapLogger.Infoln("Exit Play Change Player")
 	return
@@ -94,6 +93,7 @@ func (c *ChangePlayerProc) Response(targetMap map[string]any, reqParam map[strin
 				logger.ZapLogger.Errorw("JSON Error", "Error", err)
 				return err
 			}
+			logger.ZapLogger.Infow(models.CHANGEPLAYER, "Payload", string(resp))
 			logger.ZapLogger.Infow(models.CHANGEPLAYER, "Game", gameId, "Clinet Count", len(clientList))
 			wsMessage := models.WSMessage{
 				Type: models.CHANGEPLAYER,

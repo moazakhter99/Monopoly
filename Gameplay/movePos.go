@@ -6,6 +6,7 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"errors"
 	"strconv"
 )
 
@@ -21,7 +22,7 @@ func CreateMovePos(db db.DbOperations, room gameroom.Room) *MovePosProc {
 	}
 }
 
-func (m *MovePosProc) Validate(reqMsg []byte) (payload any, err error) {
+func (m *MovePosProc) Validate(reqMsg []byte, param map[string]string) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Validate Move Pos")
 	var req models.ReqMovePos
 	err = json.Unmarshal(reqMsg, &req)
@@ -29,6 +30,12 @@ func (m *MovePosProc) Validate(reqMsg []byte) (payload any, err error) {
 		logger.ZapLogger.Errorw(models.MOVEPOS, "Validation Error", err)
 		return
 	}
+	if param["Player"] != m.room.GetCurrentPlayer(param["Game"]) {
+		logger.ZapLogger.Errorf("Player %v is not playing", param["Player"])
+		logger.ZapLogger.Infoln("Exit Validate Move Pos")
+		return nil, errors.New("Not Playing")
+	}
+
 	logger.ZapLogger.Infoln("Exit Validate Move Pos")
 	return req, err
 }
@@ -65,6 +72,7 @@ func (m *MovePosProc) Play(payload any, param map[string]string) (targetMap map[
 
 	switch block.OwnerId {
 	case "":
+		logger.ZapLogger.Infow(models.MOVEPOS,  "Block Type", block.Type)
 		// Buy or Action Card
 		if block.Type == models.SPECIALCARD {
 			var status string
@@ -74,7 +82,7 @@ func (m *MovePosProc) Play(payload any, param map[string]string) (targetMap map[
 				Type:      block.Type,
 				BlockName: block.BlockName,
 			}
-			if block.BlockName == models.COMMUNITYCHEST || block.BlockName == models.CHANCE {
+			if block.BlockName == "Community Chest" || block.BlockName == "Chance" {
 				response.CardNo = getCardNo()
 				status = models.ACTIONCARD + "_" + strconv.Itoa(response.CardNo) + "_" + block.BlockName
 			}
@@ -103,7 +111,7 @@ func (m *MovePosProc) Play(payload any, param map[string]string) (targetMap map[
 			Type:     block.Type,
 			OwnerId:  playerId,
 		}
-		logger.ZapLogger.Infow(models.CHANGEPLAYER, "Current Player", playerId)
+		logger.ZapLogger.Infow(models.MOVEPOS, "Current Player", playerId)
 
 	default:
 		// Pay rent
@@ -115,6 +123,7 @@ func (m *MovePosProc) Play(payload any, param map[string]string) (targetMap map[
 			OwnerId:  block.OwnerId,
 			Price: block.Price,
 		}
+		logger.ZapLogger.Infow(models.MOVEPOS,  "Block Type", models.PAYRENT)
 	}
 
 	targetMap[""] = response
@@ -156,7 +165,7 @@ func (m *MovePosProc) Response(targetMap map[string]any, reqParam map[string]str
 		if !ok {
 			logger.ZapLogger.Errorf("Client Not Found: %v", playerId)
 			return
-		} 
+		}
 
 		ownerId := movePosResp.OwnerId
 		if ownerId == "" {
@@ -183,7 +192,7 @@ func (m *MovePosProc) Response(targetMap map[string]any, reqParam map[string]str
 			}
 			req, err := json.Marshal(calRentReq)
 			if err != nil {
-				logger.ZapLogger.Infow(models.MOVEPOS, "Json Error", err)
+				logger.ZapLogger.Infow(models.CALCULATERENT, "Json Error", err)
 				return
 			}
 

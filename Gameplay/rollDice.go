@@ -6,6 +6,7 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"errors"
 )
 
 type RollDiceProc struct {
@@ -20,7 +21,7 @@ func CreateRollDice(db db.DbOperations, room gameroom.Room) *RollDiceProc {
 	}
 }
 
-func (g *RollDiceProc) Validate(reqMsg []byte) (payload any, err error) {
+func (g *RollDiceProc) Validate(reqMsg []byte, param map[string]string) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Roll Dice Validate")
 	var req models.ReqRolDice
 	logger.ZapLogger.Infoln("Msg: ", string(reqMsg))
@@ -29,6 +30,12 @@ func (g *RollDiceProc) Validate(reqMsg []byte) (payload any, err error) {
 		logger.ZapLogger.Errorw(models.ROLLDICE, "Validation Error", err)
 		return
 	}
+	if param["Player"] != g.room.GetCurrentPlayer(param["Game"]) {
+		logger.ZapLogger.Errorf("Player %v is not playing", param["Player"])
+		logger.ZapLogger.Infoln("Exit Validate Move Pos")
+		return nil, errors.New("Not Playing")
+	}
+
 	logger.ZapLogger.Infoln("Exit Roll Dice Validate")
 	return req, err
 }

@@ -199,9 +199,9 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 	row := l.DB.QueryRow(query, position)
 
 	var (
-		block_id   sql.NullString
-		block_type sql.NullString
-		block_name sql.NullString
+		block_id    sql.NullString
+		block_type  sql.NullString
+		block_name  sql.NullString
 		block_price sql.NullInt64
 	)
 
@@ -212,10 +212,10 @@ func (l *SqlLite) GetBlockState(position int, gameId string) (block *models.Bloc
 	}
 
 	block = &models.Block{
-		BlockId: block_id.String,
-		Type:    block_type.String,
+		BlockId:   block_id.String,
+		Type:      block_type.String,
 		BlockName: block_name.String,
-		Price: int(block_price.Int64),
+		Price:     int(block_price.Int64),
 	}
 
 	if block.Type != models.SPECIALCARD {
@@ -246,7 +246,7 @@ func (l *SqlLite) GetBlockOwner(blockID, gameID string) (playerId string, err er
 
 	playerId = player_id.String
 
-	return 
+	return
 }
 
 func (l *SqlLite) GetBlockInfoById(blockId string) (block *models.Block, err error) {
@@ -300,16 +300,17 @@ func (l *SqlLite) UpdatePlayerCard(playerId, gameId, blockId, status string) (er
 	return
 }
 
-func (l *SqlLite) GetCardAction(cardNo string) (action string, err error) {
+func (l *SqlLite) GetCardAction(cardNo, blockType string) (action string, err error) {
 	logger.ZapLogger.Infoln("Enter Get Card Action")
 
-	query := `SELECT action FROM block_info WHERE info_id = ?`
+	query := `SELECT action FROM block_info WHERE info_no = ? AND block_type = ?`
 
-	row := l.DB.QueryRow(query, cardNo)
+	row := l.DB.QueryRow(query, cardNo, blockType)
 
 	var card_action sql.NullString
 	err = row.Scan(&card_action)
 	if err != nil {
+		logger.ZapLogger.Errorw("Values", "cardNo", cardNo, "BlockType", blockType)
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
@@ -387,7 +388,7 @@ func (l *SqlLite) GetBlockInfoByBlockType(blockType string) (jailInfo []models.J
 	for rows.Next() {
 
 		var (
-			info_id sql.NullString
+			info_id    sql.NullString
 			block_info sql.NullString
 		)
 
@@ -399,7 +400,7 @@ func (l *SqlLite) GetBlockInfoByBlockType(blockType string) (jailInfo []models.J
 
 		jail := models.Jail{
 			InfoId: info_id.String,
-			Info: block_info.String,
+			Info:   block_info.String,
 		}
 
 		jailInfo = append(jailInfo, jail)
@@ -431,7 +432,7 @@ func (l *SqlLite) GetCardOwnership(blockId, gameId string) (playerId string, err
 }
 
 func (l *SqlLite) UpdateGetOutOfJailCard(playerId, gameId string) (err error) {
-	logger.ZapLogger.Infoln ("Enter Update Get Out Of Jail Card")
+	logger.ZapLogger.Infoln("Enter Update Get Out Of Jail Card")
 
 	query := `INSERT INTO game_player (player_id, game_id, card_id) VALUES (?, ?, (SELECT info_id FROM block_info WHERE block_type = 'SPECIAL_CARD'))`
 
@@ -537,7 +538,6 @@ func (l *SqlLite) GetCardOwnershipStatus(playerId, blockId string) (status strin
 	return
 }
 
-
 func (l *SqlLite) GetCardOwnerCount(playerId, gameId string) (count int, err error) {
 	logger.ZapLogger.Infoln("Enter Get Card Owner Count")
 
@@ -554,12 +554,11 @@ func (l *SqlLite) GetCardOwnerCount(playerId, gameId string) (count int, err err
 		logger.ZapLogger.Errorw("SQL Err", "Error", err)
 		return
 	}
-	
+
 	count = int(card_count.Int16)
 
 	return
 }
-
 
 func (l *SqlLite) GetPlayerStatusList(playerId, gameId string) (statusList []string, err error) {
 	logger.ZapLogger.Infoln("Enter Get Player Status List")
@@ -641,6 +640,6 @@ func (l *SqlLite) GetBlockPrice(blockId string) (price int, err error) {
 	}
 
 	price = int(block_price.Int64)
-	
+
 	return
 }

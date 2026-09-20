@@ -99,7 +99,7 @@ func (c *NewClient) WriteMessage() {
 			return
 		}
 
-		logger.ZapLogger.Infoln("Write Msg: ", string(msgByte))
+		// logger.ZapLogger.Infoln("Write Msg: ", string(msgByte))
 		err := json.Unmarshal(msgByte, &message)
 		if err != nil {
 			wsError := models.WsError{

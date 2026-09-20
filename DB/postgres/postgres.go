@@ -93,7 +93,7 @@ func (p *Postgres) GetPosByBlockName(blockName string) (pos int, err error) {
 }
 
 // GetCardAction implements [db.DbOperations].
-func (p *Postgres) GetCardAction(cardNo string) (action string, err error) {
+func (p *Postgres) GetCardAction(cardNo, blockType string) (action string, err error) {
 	panic("unimplemented")
 }
 

@@ -6,6 +6,7 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"errors"
 	"strconv"
 	"strings"
 )
@@ -22,7 +23,7 @@ func CreatePayRent(db db.DbOperations, room gameroom.Room) *PayRentProc {
 	}
 }
 
-func (p *PayRentProc) Validate(reqMsg []byte) (payload any, err error) {
+func (p *PayRentProc) Validate(reqMsg []byte, param map[string]string) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Validate Pay Rent")
 	var req models.ReqPayRent
 	err = json.Unmarshal(reqMsg, &req)
@@ -30,6 +31,12 @@ func (p *PayRentProc) Validate(reqMsg []byte) (payload any, err error) {
 		logger.ZapLogger.Errorw(models.PAYRENT, "Validation Error", err)
 		return
 	}
+	if param["Player"] != p.room.GetCurrentPlayer(param["Game"]) {
+		logger.ZapLogger.Errorf("Player %v is not playing", param["Player"])
+		logger.ZapLogger.Infoln("Exit Validate Move Pos")
+		return nil, errors.New("Not Playing")
+	}
+
 	logger.ZapLogger.Infoln("Exit Validate Pay Rent")
 	return req, err
 }

@@ -30,7 +30,7 @@ func (hc *GameHubController) HandleHub(req router.Request, readChan chan []byte)
 	reqParam := req.Param
 
 	// Send the Ws Message and get the payload
-	payload, err := hc.game.Validate(msg)
+	payload, err := hc.game.Validate(msg, reqParam)
 	if err != nil {
 		// Either find a different way to send error or use the readChan as error Chan or just rename it
 		logger.ZapLogger.Errorw("Validation Error", "Error", err)

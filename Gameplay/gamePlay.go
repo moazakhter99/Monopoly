@@ -261,7 +261,7 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 	switch blockType {
 
 	case models.COMMUNITYCHEST:
-		action, err := db.GetCardAction(req.CardId)
+		action, err := db.GetCardAction(req.CardId, blockType)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 			return
@@ -277,7 +277,7 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 
 	case models.CHANCE:
 	
-		action, err := db.GetCardAction(req.CardId)
+		action, err := db.GetCardAction(req.CardId, blockType)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 			return

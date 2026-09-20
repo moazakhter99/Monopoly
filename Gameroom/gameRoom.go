@@ -13,6 +13,7 @@ type Room interface {
 	Flush()
 	flush()
 	GetClientListByGame(gameId string) (clientMap ClientMap)
+	GetCurrentPlayer(gameId string) (playerId string)
 }
 
 type ClientMap map[string]*NewClient
@@ -103,4 +104,15 @@ func (r *GameRoom) flush() {
 
 func (r *GameRoom) GetClientListByGame(gameId string) (clientMap ClientMap) {
 	return r.GamePlayerMap[gameId]
+}
+
+func (r *GameRoom) GetCurrentPlayer(gameId string) (playerId string) {
+	r.mut.Lock()
+	defer r.mut.Unlock()
+	state, ok := r.GameState[gameId]
+	if ok {
+		playerId = state[0]
+		return
+	}
+	return ""
 }

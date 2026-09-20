@@ -112,7 +112,8 @@
 
 #### Things to test
 1. Did not test Action Card and Jail Properly
-2. Action card is getting initiated twice for single diceroll
+2. It would be better to test it with overall game developed
+3. Action card is a little tested while jail is not tested
 
 ### Things to Complete
 Could Create Branches for each functionallity to work (Bored in one fuction)

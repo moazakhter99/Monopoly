@@ -6,6 +6,7 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"errors"
 )
 
 type BuyBlockProc struct {
@@ -20,7 +21,7 @@ func CreateBuyBlock(db db.DbOperations, room gameroom.Room) *BuyBlockProc {
 	}
 }
 
-func (b *BuyBlockProc) Validate(reqMsg []byte) (payload any, err error) {
+func (b *BuyBlockProc) Validate(reqMsg []byte, param map[string]string) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Validate Buy Block")
 	var req models.ReqBuyBlock
 	err = json.Unmarshal(reqMsg, &req)
@@ -28,6 +29,12 @@ func (b *BuyBlockProc) Validate(reqMsg []byte) (payload any, err error) {
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "Validation Error", err)
 		return
 	}
+	if param["Player"] != b.room.GetCurrentPlayer(param["Game"]) {
+		logger.ZapLogger.Errorf("Player %v is not playing", param["Player"])
+		logger.ZapLogger.Infoln("Exit Validate Move Pos")
+		return nil, errors.New("Not Playing")
+	}
+
 	logger.ZapLogger.Infoln("Exit Validate Buy Block")
 	return req, err
 }

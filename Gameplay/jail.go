@@ -6,6 +6,7 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"errors"
 )
 
 type JailProc struct {
@@ -20,7 +21,7 @@ func CreateJail(db db.DbOperations, room gameroom.Room) *JailProc {
 	}
 }
 
-func (j *JailProc) Validate(reqMsg []byte) (payload any, err error) {
+func (j *JailProc) Validate(reqMsg []byte, param map[string]string) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Validate Jail")
 	var req models.ReqJail
 	err = json.Unmarshal(reqMsg, &req)
@@ -28,6 +29,12 @@ func (j *JailProc) Validate(reqMsg []byte) (payload any, err error) {
 		logger.ZapLogger.Errorw(models.JAIL, "Validation Error", err)
 		return
 	}
+	if param["Player"] != j.room.GetCurrentPlayer(param["Game"]) {
+		logger.ZapLogger.Errorf("Player %v is not playing", param["Player"])
+		logger.ZapLogger.Infoln("Exit Validate Move Pos")
+		return nil, errors.New("Not Playing")
+	}
+
 	logger.ZapLogger.Infoln("Exit Validate Jail")
 	return req, err
 }
@@ -99,7 +106,7 @@ func (j *JailProc) Play(payload any, param map[string]string) (targetMap map[str
 	}
 
 	targetMap[""] = response
-	j.room.UpdateGameState(gameId, playerId, models.ROLLDICE)
+	j.room.UpdateGameState(gameId, playerId, models.JAIL)
 
 	logger.ZapLogger.Infoln("Exit Jail Play")
 	return

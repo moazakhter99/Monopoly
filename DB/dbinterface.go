@@ -2,9 +2,8 @@ package db
 
 import models "Monopoly/Models"
 
-
 type DbOperations interface {
-	Ping() (err error)	
+	Ping() (err error)
 	InsertGame(gameId, matchId string) (err error)
 	InsertPlayer(player *models.Player, gameId string) (err error)
 	GetGameFromMatchId(matchId string) (gameId string, err error)
@@ -13,7 +12,7 @@ type DbOperations interface {
 	UpdatePlayerPos(playerId string, position int) (err error)
 	GetBlockInfoById(blockId string) (block *models.Block, err error)
 	UpdatePlayerCard(playerId, gameId, blockId, status string) (err error)
-	GetCardAction(cardNo string) (action string, err error)
+	GetCardAction(cardNo, blockType string) (action string, err error)
 	GetPlayerCashPos(playerId string) (cash, pos int, err error)
 	UpdatePlayerCash(playerId string, cash, pos int) (err error)
 	GetPosByBlockName(blockName string) (pos int, err error)

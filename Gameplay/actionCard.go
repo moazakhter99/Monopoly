@@ -22,7 +22,7 @@ func CreateActionCard(db db.DbOperations, room gameroom.Room) *ActionCardProc {
 	}
 }
 
-func (a *ActionCardProc) Validate(reqMsg []byte) (payload any, err error) {
+func (a *ActionCardProc) Validate(reqMsg []byte, param map[string]string) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Validate Action Card")
 	var req models.ReqActionCard
 	err = json.Unmarshal(reqMsg, &req)
@@ -30,6 +30,12 @@ func (a *ActionCardProc) Validate(reqMsg []byte) (payload any, err error) {
 		logger.ZapLogger.Errorw(models.ACTIONCARD, "Validation Error", err)
 		return
 	}
+	if param["Player"] != a.room.GetCurrentPlayer(param["Game"]) {
+		logger.ZapLogger.Errorf("Player %v is not playing", param["Player"])
+		logger.ZapLogger.Infoln("Exit Validate Move Pos")
+		return nil, errors.New("Not Playing")
+	}
+
 	logger.ZapLogger.Infoln("Exit Validate Action Card")
 	return req, err
 }
@@ -51,12 +57,12 @@ func (a *ActionCardProc) Play(payload any, param map[string]string) (map[string]
 		return nil, err
 	}
 
-	logger.ZapLogger.Infow(models.ACTIONCARD, "Current Cash", cash)
+	logger.ZapLogger.Infow(models.ACTIONCARD, "Current Cash", cash, "Block Type", blockType)
 
 	switch blockType {
 
 	case models.COMMUNITYCHEST:
-		action, err := a.db.GetCardAction(req.CardId)
+		action, err := a.db.GetCardAction(req.CardId, blockType)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 			return nil, err
@@ -72,7 +78,7 @@ func (a *ActionCardProc) Play(payload any, param map[string]string) (map[string]
 
 	case models.CHANCE:
 
-		action, err := a.db.GetCardAction(req.CardId)
+		action, err := a.db.GetCardAction(req.CardId, blockType)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 			return nil, err
@@ -204,7 +210,7 @@ func (a *ActionCardProc) Play(payload any, param map[string]string) (map[string]
 	}
 
 	targetMap[""] = response
-	a.room.UpdateGameState(gameId, playerId, models.ROLLDICE)
+	a.room.UpdateGameState(gameId, playerId, models.ACTIONCARD)
 
 	logger.ZapLogger.Infoln("Exit Play Action Card")
 	return targetMap, nil

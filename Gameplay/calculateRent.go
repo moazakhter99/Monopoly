@@ -6,6 +6,7 @@ import (
 	models "Monopoly/Models"
 	"Monopoly/logger"
 	"encoding/json"
+	"errors"
 	"strconv"
 )
 
@@ -21,7 +22,7 @@ func CreateCalculateRent(db db.DbOperations, room gameroom.Room) *CalculateRentP
 	}
 }
 
-func (c *CalculateRentProc) Validate(reqMsg []byte) (payload any, err error) {
+func (c *CalculateRentProc) Validate(reqMsg []byte, param map[string]string) (payload any, err error) {
 	logger.ZapLogger.Infoln("Enter Validate Calculate Rent")
 	var req models.ReqCalculateRent
 	err = json.Unmarshal(reqMsg, &req)
@@ -29,6 +30,12 @@ func (c *CalculateRentProc) Validate(reqMsg []byte) (payload any, err error) {
 		logger.ZapLogger.Errorw(models.CALCULATERENT, "Validation Error", err)
 		return
 	}
+	if param["Player"] != c.room.GetCurrentPlayer(param["Game"]) {
+		logger.ZapLogger.Errorf("Player %v is not playing", param["Player"])
+		logger.ZapLogger.Infoln("Exit Validate Move Pos")
+		return nil, errors.New("Not Playing")
+	}
+
 	logger.ZapLogger.Infoln("Exit Validate Calculate Rent")
 	return req, err
 }
@@ -101,6 +108,7 @@ func (c *CalculateRentProc) Play(payload any, param map[string]string) (map[stri
 	logger.ZapLogger.Infow(models.CALCULATERENT, "Client", req.OwnerId, "Resp Body", ownerResp)
 
 	targetMap[req.OwnerId] = ownerResp
+	c.room.UpdateGameState(gameId, playerId, models.CALCULATERENT)
 
 	logger.ZapLogger.Infoln("Exit Play Calculate Rent")
 	return targetMap, nil
