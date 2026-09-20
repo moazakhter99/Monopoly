@@ -54,6 +54,7 @@ type RespBuyBlock struct {
 	Buy      bool   `json:"buy"`
 	Cash     int    `json:"cash"`
 	Seq		 int	`json:"seq"`
+	BuyProperty	bool	`json:"buy_property"`
 	// ChangePlayer bool `json:"change_player"`
 }
 
@@ -128,6 +129,36 @@ type RespPayRent struct {
 	RenterId	string	`json:"renter_id"`
 }
 
+type ReqBuyProperty struct {
+	BlockId		string `json:"block_id"`
+	Property	string	`json:"property"`
+
+}
+
+type RespBuyProperty struct {
+	BlockId		string	`json:"block_id"`
+	Property	string	`json:"property"`
+	Built		bool	`json:"built"`
+	Cash		int		`json:"cash"`
+
+}
+
+type ReqSellProperty struct {
+	BlockId		string	`json:"block_id"`
+	Property	string	`json:"property"`
+	Count		int		`json:"count"`
+
+}
+
+type RespSellProperty struct {
+	BlockId		string	`json:"block_id"`
+	Property	string	`json:"property"`
+	Count		int		`json:"count"`
+	Cash		int		`json:"cash"`
+	Sold		bool	`json:"sold"`
+	Status		string	`json:"status"`
+
+}
 type RespError struct {
 	Stage string `json:"stage"`
 	Error string `json:"error"`

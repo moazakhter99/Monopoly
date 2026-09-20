@@ -30,5 +30,9 @@ type DbOperations interface {
 	GetPlayerStatus(playerId, gameId string) (status string, err error)
 	GetBlockInfo(blockType string, infoNo int) (cardInfo string, err error)
 	GetBlockPrice(blockId string) (price int, err error)
+	GetPlayerColourCount(playerId, blockId string) (cardCount int, cardColour string, err error)
+	UpdateCardStatus(playerId, gameId, blockId, status string) (err error)
+	GetCardStatus(playerId, gameId, blockId string) (status string, err error)
+	UpdateCardColour(playerId, colour string) (err error)
 
 }

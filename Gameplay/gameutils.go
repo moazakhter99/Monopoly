@@ -88,6 +88,38 @@ func utilityRentCalculation(baseRent, cardCount int) (rent int) {
 	return
 } 
 
+func getColourStatus(count int) (buyProperty bool) {
+	if count >= 3 {
+		buyProperty = true
+		return
+	}
+
+	buyProperty = false
+	return
+}
+
+func updateCardStatus(currStatus string) (status string) {
+
+	switch currStatus {
+
+	case models.COLOUR:
+		status = models.HOUSE_1
+
+	case models.HOUSE_1:
+		status = models.HOUSE_2
+
+	case models.HOUSE_2:
+		status = models.HOUSE_3
+
+	case models.HOUSE_3:
+		status = models.HOUSE_4
+
+	case models.HOUSE_4:
+		status = models.HOTEL
+	}
+	return
+}
+
 func cityRentCalculation(baseRent int, status string) (rent int) {
 
 	switch status {
@@ -99,7 +131,7 @@ func cityRentCalculation(baseRent int, status string) (rent int) {
 		rent = baseRent * 2
 
 	case models.HOUSE_1:
-		rent = baseRent * 2
+		rent = baseRent * 5
 
 	case models.HOUSE_2:
 		rent = baseRent * 15
@@ -114,9 +146,10 @@ func cityRentCalculation(baseRent int, status string) (rent int) {
 		rent = baseRent * 50
 
 	}
-
 	return
 }
+
+// func update
 
 func callChangePlayer(client *models.Client, readCh chan<- models.WSMessage) {
 
@@ -206,7 +239,25 @@ func getCardNo() (value int) {
 
 }
 
+func updateSellPropertyStatus(status string, count int) (updatedStatus string) {
 
-func callActionCard(client *models.Client, readCh chan <- models.WSMessage) {
+	updatedStatus = status 
+	if updatedStatus == models.HOTEL {
+	    updatedStatus = models.HOUSE_4
+	    return
+	} 
 
+	for i := 0; i < count; i++ {
+    	switch updatedStatus {
+    	case models.HOUSE_4:
+        	updatedStatus = models.HOUSE_3
+    	case models.HOUSE_3:
+        	updatedStatus = models.HOUSE_2
+    	case models.HOUSE_2:
+     		updatedStatus = models.HOUSE_1
+    	case models.HOUSE_1:
+        	updatedStatus = models.COLOUR
+    	}
+	}
+	return
 }

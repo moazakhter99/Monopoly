@@ -192,7 +192,6 @@ func BuyBlock(request json.RawMessage, client *models.Client, db db.DbOperations
 	} else {
 		logger.ZapLogger.Infow("Player Low on Cash", "Player Id", playerId, "Cash", cash)
 		buy = false
-
 	}
 
 	// Calculate Status for (colour, house, hotel)
@@ -204,11 +203,29 @@ func BuyBlock(request json.RawMessage, client *models.Client, db db.DbOperations
 		return
 	}
 
+	colourCount, colour, err := db.GetPlayerColourCount(playerId, req.BlockId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
+		return
+	}
+
+	// Calculate Status for (colour, house, hotel)
+	buyProperty := getColourStatus(colourCount)
+
+	if buyProperty {
+		err = db.UpdateCardColour(playerId, colour)
+		if err != nil {
+			logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
+			return
+		}
+	}
+
 	logger.ZapLogger.Infow(models.BUYBLOCK, "Game Id", gameId, "Player Id", playerId, "Block Id", req.BlockId)
 	resp := models.RespBuyBlock{
 		BlockId:  req.BlockId,
 		Buy:      buy,
 		Cash:     updatedCash,
+		BuyProperty: buyProperty,
 	}
 
 	err = db.UpdatePlayerCash(playerId, updatedCash, pos)
@@ -727,5 +744,143 @@ func PayRent(request json.RawMessage, client *models.Client, db db.DbOperations,
 	go callChangePlayer(client, readCh)
 
 	logger.ZapLogger.Infoln("Exit Pay Rent")
+	return
+}
+
+func BuyProperty(request json.RawMessage, client *models.Client, db db.DbOperations) (response json.RawMessage) {
+	logger.ZapLogger.Infoln("Buy Property")
+	var req models.ReqBuyProperty
+	var updatedStatus string
+
+	err := json.Unmarshal(request, &req)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYPROPERTY, "JSON Error", err)
+		return
+	}
+
+	playerId := client.PlayerId
+	gameId := client.GameId
+	built := false
+	const price = 200
+
+	// Validate whether the player can buy house or hotel on that block
+
+	cash, pos, err := db.GetPlayerCashPos(playerId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYPROPERTY, "DB Error", err)
+		return
+	}
+
+	status, err := db.GetCardStatus(playerId, gameId, req.BlockId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYPROPERTY, "DB Error", err)
+		return
+	}
+
+	if !checkPlayerCash(cash, price) {
+		logger.ZapLogger.Infow(models.BUYPROPERTY, "Not Enough Cash", cash)
+		err = errors.New("not enough cash")
+		return
+	}
+
+	updatedCash := cash - price
+	if status != models.BASE && status != "" {
+		updatedStatus = updateCardStatus(status)
+		built = true
+	}
+
+	err = db.UpdateCardStatus(playerId, gameId, req.BlockId, updatedStatus)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYPROPERTY, "DB Error", err)
+		return
+	}
+
+	err = db.UpdatePlayerCash(playerId, updatedCash, pos)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYPROPERTY, "DB Error", err)
+		return
+	}
+
+	resp := models.RespBuyProperty{
+		BlockId: req.BlockId,
+		Property: req.Property,
+		Built: built,
+		Cash: updatedCash,
+	}
+
+	response, err = json.Marshal(resp)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.BUYPROPERTY, "JSON Error", err)
+		return
+	}
+
+	// Send the property to everyone and exepct tha cash which only goes to the current player
+
+	return
+}
+
+func SellProperty(request json.RawMessage, client *models.Client, db db.DbOperations) (response json.RawMessage) {
+	logger.ZapLogger.Infoln("Enter Sell Property")
+	var req models.ReqSellProperty
+	var updatedStatus string
+	var updatedCash int
+	
+	err := json.Unmarshal(request, &req)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.SELLPROPERTY, "JSON Error", err)
+		return
+	}
+
+	playerId := client.PlayerId
+	gameId := client.GameId
+	sold := false
+
+	// validate the block property can be sold
+
+	cardStatus, err := db.GetCardStatus(playerId, gameId, req.BlockId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.SELLPROPERTY, "DB Error", err)
+		return
+	}
+
+	cash, pos, err := db.GetPlayerCashPos(playerId)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.SELLPROPERTY, "DB Error", err)
+		return
+	}
+
+	
+	if cardStatus != models.BASE && cardStatus != models.COLOUR {
+		updatedStatus = updateSellPropertyStatus(cardStatus, req.Count)
+		updatedCash = cash + (100 * req.Count)
+		sold = true
+	}
+
+	err = db.UpdateCardStatus(playerId, gameId, req.BlockId, updatedStatus)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.SELLPROPERTY, "DB Error", err)
+		return
+	}
+
+	err = db.UpdatePlayerCash(playerId, updatedCash, pos)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.SELLPROPERTY, "DB Error", err)
+		return
+	}
+
+	resp := models.RespSellProperty{
+		BlockId: req.BlockId,
+		Property: req.Property,
+		Count: req.Count,
+		Cash: updatedCash,
+		Sold: sold,
+		Status: updatedStatus,
+	}
+	response, err = json.Marshal(resp)
+	if err != nil {
+		logger.ZapLogger.Errorw(models.SELLPROPERTY, "JSON Error", err)
+		return
+	}
+
 	return
 }
