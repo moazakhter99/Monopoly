@@ -113,7 +113,7 @@ func (p *Postgres) GetPosByBlockName(blockName string) (pos int, err error) {
 }
 
 // GetCardAction implements [db.DbOperations].
-func (p *Postgres) GetCardAction(cardNo string) (action string, err error) {
+func (p *Postgres) GetCardAction(cardNo, blockType string) (action string, err error) {
 	panic("unimplemented")
 }
 
@@ -137,7 +137,7 @@ func (p *Postgres) GetBlockInfoById(blockId string) (block *models.Block, err er
 }
 
 // UpdatePlayerCard implements [db.DbOperations].
-func (p *Postgres) UpdatePlayerCard(playerId string, gameId string, blockId string) (err error) {
+func (p *Postgres) UpdatePlayerCard(playerId string, gameId string, blockId, status string) (err error) {
 	return
 }
 

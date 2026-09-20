@@ -1,0 +1,2 @@
+#!/bin/bash
+sqlite3 /home/moaz/personaldir/Personal/Monopoly/Monopoly/DB/sqlLite/sqlLiteDB/monopoly.db

@@ -13,10 +13,12 @@ type WsError struct {
 	WsError int
 }
 
-type Request struct {
+type ReqRolDice struct {
 	Roll bool `json:"roll"`
 }
 
+type Request struct {
+}
 type RespDiceRoll struct {
 	DiceVal  int    `json:"dice_val"`
 }
@@ -33,7 +35,8 @@ type RespMovePos struct {
 	Type	string	`json:"type"`
 	OwnerId	string	`json:"owner_id"`
 	CardNo	int		`json:"card_no"`
-	CardInfo	string	`json:"card_info"`		
+	CardInfo	string	`json:"card_info"`
+	Price 		int	`json:"price"`		
 }
 
 type ReqBuyBlock struct {
@@ -155,4 +158,9 @@ type RespSellProperty struct {
 	Sold		bool	`json:"sold"`
 	Status		string	`json:"status"`
 
+}
+type RespError struct {
+	Stage string `json:"stage"`
+	Error string `json:"error"`
+	Status string `json:"status"`
 }

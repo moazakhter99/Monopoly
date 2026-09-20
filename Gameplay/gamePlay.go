@@ -12,7 +12,7 @@ import (
 
 func RollDice(request json.RawMessage, client *models.Client, readCh chan<- models.WSMessage) (response json.RawMessage) {
 	logger.ZapLogger.Infoln("Roll Dice")
-	var req models.Request
+	var req models.ReqRolDice
 	var diceVal int
 
 	err := json.Unmarshal(request, &req)
@@ -35,7 +35,7 @@ func RollDice(request json.RawMessage, client *models.Client, readCh chan<- mode
 		return
 	}
 
-	go callMovePos(diceVal, client, readCh)
+	go oldcallMovePos(diceVal, client, readCh)
 
 	return
 }
@@ -194,7 +194,10 @@ func BuyBlock(request json.RawMessage, client *models.Client, db db.DbOperations
 		buy = false
 	}
 
-	err = db.UpdatePlayerCard(playerId, gameId, req.BlockId)
+	// Calculate Status for (colour, house, hotel)
+	status := models.BASE
+
+	err = db.UpdatePlayerCard(playerId, gameId, req.BlockId, status)
 	if err != nil {
 		logger.ZapLogger.Errorw(models.BUYBLOCK, "DB Error", err)
 		return
@@ -275,7 +278,7 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 	switch blockType {
 
 	case models.COMMUNITYCHEST:
-		action, err := db.GetCardAction(req.CardId)
+		action, err := db.GetCardAction(req.CardId, blockType)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 			return
@@ -291,7 +294,7 @@ func ActionCard(request json.RawMessage, client *models.Client, db db.DbOperatio
 
 	case models.CHANCE:
 	
-		action, err := db.GetCardAction(req.CardId)
+		action, err := db.GetCardAction(req.CardId, blockType)
 		if err != nil {
 			logger.ZapLogger.Errorw(models.ACTIONCARD, "DB Error", err)
 			return
